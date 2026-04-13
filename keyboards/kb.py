@@ -10,7 +10,7 @@ def main_menu(lang="uz") -> ReplyKeyboardMarkup:
     kb.row(KeyboardButton(text=t(lang,"auto_trading")), KeyboardButton(text=t(lang,"copy_trading")))
     kb.row(KeyboardButton(text=t(lang,"arbitraj")), KeyboardButton(text=t(lang,"history")))
     kb.row(KeyboardButton(text=t(lang,"referral")), KeyboardButton(text=t(lang,"guide")))
-    kb.row(KeyboardButton(text=t(lang,"support")))
+    kb.row(KeyboardButton(text=t(lang,"support")), KeyboardButton(text=t(lang,"settings")))
     return kb.as_markup(resize_keyboard=True)
 
 

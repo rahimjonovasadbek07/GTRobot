@@ -440,7 +440,11 @@ async def cb_back_trading(call: CallbackQuery):
     user = get_user(call.from_user.id)
     user_id = call.from_user.id
     is_running = user_id in auto_tasks and not auto_tasks[user_id].done()
+    api_status = "✅ Ulangan" if user and user.get("mexc_api_key") else "❌ Ulanmagan"
+    bot_status = "✅ Faol" if is_running else "⏹ To\'xtatilgan"
     await call.message.edit_text(
-        f"🤖 <b>Auto Trading</b>",
+        f"🤖 <b>Auto Trading (MEXC)</b>\n\n"
+        f"🔑 API: {api_status}\n"
+        f"⚙️ Bot: {bot_status}",
         reply_markup=trading_main_kb(is_running)
     )

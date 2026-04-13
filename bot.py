@@ -20,6 +20,7 @@ from handlers.copy_trading import router as copy_trading_router
 from handlers.arbitrage import router as arbitrage_router
 from handlers.guide import router as guide_router
 from handlers.mining import router as mining_router, mining_payout_loop
+from handlers.settings import router as settings_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ async def main():
     dp.include_router(signals_router)
     dp.include_router(arbitrage_router)
     dp.include_router(guide_router)
+    dp.include_router(settings_router)
     dp.include_router(mining_router)
     dp.include_router(copy_trading_router)
     dp.include_router(trading_router)
