@@ -1,0 +1,363 @@
+from aiogram import Router, F
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton
+from datetime import datetime, timedelta
+import asyncio
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database.db import (
+    get_user, update_balance, get_mining_plans, get_user_mining,
+    start_mining, add_mining_earnings, stop_mining,
+    get_mining_stats, get_all_active_miners
+)
+from keyboards.kb import main_menu
+
+router = Router()
+
+# ===== YANGI NARXLAR VA DAROMADLAR =====
+# Model 1: Foyda modeli — daromad < narx (siz doim foydadasiz)
+#
+# Miner v1: Kunlik 10,000 UZS → Kunlik daromad 8,000 UZS (soatiga 333 UZS)
+# Miner v2: Kunlik 30,000 UZS → Kunlik daromad 24,000 UZS (soatiga 1,000 UZS)
+# Miner v3: Kunlik 100,000 UZS → Kunlik daromad 80,000 UZS (soatiga 3,333 UZS)
+
+MINING_PLANS = [
+    {
+        "id": 1,
+        "name": "⛏️ Miner v1",
+        "hourly_uzs": 500,
+        "daily_earn": 12000,
+        "daily_price": 10000,
+        "weekly_price": 60000,
+        "monthly_price": 200000,
+        "weekly_earn": 84000,
+        "monthly_earn": 360000,
+    },
+    {
+        "id": 2,
+        "name": "⛏️ Miner v2",
+        "hourly_uzs": 1500,
+        "daily_earn": 36000,
+        "daily_price": 30000,
+        "weekly_price": 180000,
+        "monthly_price": 600000,
+        "weekly_earn": 252000,
+        "monthly_earn": 1080000,
+    },
+    {
+        "id": 3,
+        "name": "⛏️ Miner v3",
+        "hourly_uzs": 5000,
+        "daily_earn": 120000,
+        "daily_price": 100000,
+        "weekly_price": 600000,
+        "monthly_price": 2000000,
+        "weekly_earn": 840000,
+        "monthly_earn": 3600000,
+    },
+]
+
+
+def mining_main_kb():
+    kb = InlineKeyboardBuilder()
+    kb.add(InlineKeyboardButton(text="⛏️ Tarif tanlash", callback_data="mining_plans"))
+    kb.add(InlineKeyboardButton(text="📊 Mining statistika", callback_data="mining_stats"))
+    kb.add(InlineKeyboardButton(text="⏹ Miningni to'xtatish", callback_data="mining_stop"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def plans_kb():
+    kb = InlineKeyboardBuilder()
+    for p in MINING_PLANS:
+        kb.add(InlineKeyboardButton(
+            text=f"{p['name']} — {p['hourly_uzs']:,} UZS/soat",
+            callback_data=f"plan_{p['id']}"
+        ))
+    kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_back"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def duration_kb(plan_id: int):
+    plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        return InlineKeyboardBuilder().as_markup()
+    kb = InlineKeyboardBuilder()
+    kb.add(InlineKeyboardButton(
+        text=f"📅 Kunlik — {plan['daily_price']:,} UZS",
+        callback_data=f"buy_mining_{plan_id}_daily"
+    ))
+    kb.add(InlineKeyboardButton(
+        text=f"📆 Haftalik — {plan['weekly_price']:,} UZS",
+        callback_data=f"buy_mining_{plan_id}_weekly"
+    ))
+    kb.add(InlineKeyboardButton(
+        text=f"🗓 Oylik — {plan['monthly_price']:,} UZS",
+        callback_data=f"buy_mining_{plan_id}_monthly"
+    ))
+    kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_plans"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+@router.message(F.text == "⛏️ Cloud Mining")
+async def show_mining(message: Message):
+    user = get_user(message.from_user.id)
+    mining = get_user_mining(message.from_user.id)
+
+    if mining:
+        stats = get_mining_stats(message.from_user.id)
+        expires = datetime.fromisoformat(stats["expires_at"])
+        time_left = expires - datetime.now()
+        hours_left = max(0, int(time_left.total_seconds() / 3600))
+        minutes_left = max(0, int((time_left.total_seconds() % 3600) / 60))
+
+        plan = next((p for p in MINING_PLANS if p["name"] == stats["plan_name"]), None)
+        hourly = plan["hourly_uzs"] if plan else stats["hourly_income"]
+
+        await message.answer(
+            f"⛏️ <b>Cloud Mining</b>\n\n"
+            f"✅ <b>Mining faol!</b>\n\n"
+            f"📋 Tarif: <b>{stats['plan_name']}</b>\n"
+            f"💰 Soatlik daromad: <b>{hourly:,} UZS</b>\n"
+            f"⏰ Qolgan: <b>{hours_left} soat {minutes_left} daqiqa</b>\n"
+            f"💵 Jami daromad: <b>{stats['total_earned']:,.0f} UZS</b>\n\n"
+            f"💰 Balans: <b>{user['balance']:,.0f} UZS</b>",
+            reply_markup=mining_main_kb()
+        )
+    else:
+        await message.answer(
+            f"⛏️ <b>Cloud Mining</b>\n\n"
+            f"Tarif tanlang va mining boshlang!\n\n"
+            f"<b>Qanday ishlaydi:</b>\n"
+            f"1️⃣ Tarif va muddat tanlang\n"
+            f"2️⃣ Balansdan to'lanadi\n"
+            f"3️⃣ Bot har soatda daromad hisoblaydi\n"
+            f"4️⃣ Daromad balansingizga tushadi\n\n"
+            f"💰 Balansingiz: <b>{user['balance']:,.0f} UZS</b>",
+            reply_markup=mining_main_kb()
+        )
+
+
+@router.callback_query(F.data == "mining_plans")
+async def cb_mining_plans(call: CallbackQuery):
+    text = "⛏️ <b>Cloud Mining Tariflar</b>\n\n"
+    for p in MINING_PLANS:
+        profit_daily = p["daily_earn"] - p["daily_price"]
+        text += (
+            f"<b>{p['name']}</b>\n"
+            f"💰 Soatlik daromad: <b>{p['hourly_uzs']:,} UZS</b>\n"
+            f"📈 Kunlik daromad: <b>{p['daily_earn']:,} UZS</b>\n"
+            f"💳 Kunlik narx: {p['daily_price']:,} UZS\n"
+            f"📊 Sof foyda/kun: +{profit_daily:,} UZS\n\n"
+        )
+    await call.message.edit_text(text, reply_markup=plans_kb())
+
+
+@router.callback_query(F.data.startswith("plan_"))
+async def cb_plan_select(call: CallbackQuery):
+    plan_id = int(call.data.split("_")[1])
+    plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        await call.answer("❌ Tarif topilmadi!", show_alert=True)
+        return
+
+    user = get_user(call.from_user.id)
+    balance = user["balance"] if user else 0
+
+    await call.message.edit_text(
+        f"⛏️ <b>{plan['name']}</b>\n\n"
+        f"💰 Soatlik daromad: <b>{plan['hourly_uzs']:,} UZS</b>\n\n"
+        f"📅 <b>Kunlik:</b>\n"
+        f"   Narx: {plan['daily_price']:,} UZS\n"
+        f"   Daromad: {plan['daily_earn']:,} UZS\n"
+        f"   Sof foyda: +{plan['daily_earn'] - plan['daily_price']:,} UZS\n\n"
+        f"📆 <b>Haftalik:</b>\n"
+        f"   Narx: {plan['weekly_price']:,} UZS\n"
+        f"   Daromad: {plan['weekly_earn']:,} UZS\n"
+        f"   Sof foyda: +{plan['weekly_earn'] - plan['weekly_price']:,} UZS\n\n"
+        f"🗓 <b>Oylik:</b>\n"
+        f"   Narx: {plan['monthly_price']:,} UZS\n"
+        f"   Daromad: {plan['monthly_earn']:,} UZS\n"
+        f"   Sof foyda: +{plan['monthly_earn'] - plan['monthly_price']:,} UZS\n\n"
+        f"💰 Balansingiz: <b>{balance:,.0f} UZS</b>\n\n"
+        f"Muddatni tanlang:",
+        reply_markup=duration_kb(plan_id)
+    )
+
+
+@router.callback_query(F.data.startswith("buy_mining_"))
+async def cb_buy_mining(call: CallbackQuery):
+    # buy_mining_{plan_id}_{duration}
+    parts = call.data.split("_")
+    plan_id = int(parts[2])
+    duration = parts[3]
+
+    plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        await call.answer("❌ Topilmadi!", show_alert=True)
+        return
+
+    # Narx va daromad
+    if duration == "daily":
+        price = plan["daily_price"]
+        earn = plan["daily_earn"]
+        dur_label = "1 kun"
+        days = 1
+        expires = (datetime.now() + timedelta(days=1)).isoformat()
+    elif duration == "weekly":
+        price = plan["weekly_price"]
+        earn = plan["weekly_earn"]
+        dur_label = "7 kun"
+        days = 7
+        expires = (datetime.now() + timedelta(weeks=1)).isoformat()
+    else:
+        price = plan["monthly_price"]
+        earn = plan["monthly_earn"]
+        dur_label = "30 kun"
+        days = 30
+        expires = (datetime.now() + timedelta(days=30)).isoformat()
+
+    user = get_user(call.from_user.id)
+    balance = user["balance"] if user else 0
+
+    if balance < price:
+        await call.answer(
+            f"❌ Balans yetarli emas!\n"
+            f"Kerak: {price:,} UZS\n"
+            f"Balans: {balance:,} UZS\n"
+            f"Yetishmaydi: {price - balance:,} UZS",
+            show_alert=True
+        )
+        return
+
+    # Balansdan yechish
+    update_balance(call.from_user.id, -price)
+
+    # Mining boshlash (hourly_income = hourly_uzs)
+    start_mining(call.from_user.id, plan_id, plan["name"], plan["hourly_uzs"], expires)
+
+    await call.message.edit_text(
+        f"✅ <b>Mining boshlandi!</b>\n\n"
+        f"⛏️ Tarif: <b>{plan['name']}</b>\n"
+        f"⏱ Muddat: <b>{dur_label}</b>\n"
+        f"💳 To'langan: <b>{price:,} UZS</b>\n\n"
+        f"📈 <b>Daromad:</b>\n"
+        f"• Soatlik: {plan['hourly_uzs']:,} UZS\n"
+        f"• Jami taxminiy: {earn:,} UZS\n"
+        f"• Sof foyda: +{earn - price:,} UZS\n\n"
+        f"💵 Daromad har soatda balansingizga tushadi! ✅"
+    )
+    await call.message.answer("✅ Mining faol!", reply_markup=main_menu())
+
+
+@router.callback_query(F.data == "mining_stats")
+async def cb_mining_stats(call: CallbackQuery):
+    stats = get_mining_stats(call.from_user.id)
+    user = get_user(call.from_user.id)
+
+    if not stats:
+        await call.answer("❌ Faol mining yo'q!", show_alert=True)
+        return
+
+    expires = datetime.fromisoformat(stats["expires_at"])
+    time_left = expires - datetime.now()
+    hours_left = max(0, int(time_left.total_seconds() / 3600))
+    minutes_left = max(0, int((time_left.total_seconds() % 3600) / 60))
+
+    plan = next((p for p in MINING_PLANS if p["name"] == stats["plan_name"]), None)
+    hourly = plan["hourly_uzs"] if plan else int(stats["hourly_income"])
+
+    await call.message.edit_text(
+        f"📊 <b>Mining Statistika</b>\n\n"
+        f"⛏️ Tarif: <b>{stats['plan_name']}</b>\n"
+        f"📅 Boshlangan: {stats['started_at'][:16]}\n"
+        f"⏰ Tugaydi: {stats['expires_at'][:16]}\n"
+        f"⌛ Qolgan: <b>{hours_left} soat {minutes_left} daqiqa</b>\n\n"
+        f"💰 Soatlik: <b>{hourly:,} UZS</b>\n"
+        f"💵 Jami daromad: <b>{stats['total_earned']:,.0f} UZS</b>\n\n"
+        f"💳 Joriy balans: <b>{user['balance']:,.0f} UZS</b>",
+        reply_markup=mining_main_kb()
+    )
+
+
+@router.callback_query(F.data == "mining_stop")
+async def cb_mining_stop(call: CallbackQuery):
+    mining = get_user_mining(call.from_user.id)
+    if not mining:
+        await call.answer("❌ Faol mining yo'q!", show_alert=True)
+        return
+    stop_mining(call.from_user.id)
+    await call.message.edit_text(
+        "⏹ <b>Mining to'xtatildi!</b>\n\n"
+        "Yangi tarif tanlash uchun ⛏️ Cloud Mining ga qayting."
+    )
+    await call.message.answer("Asosiy menyu:", reply_markup=main_menu())
+
+
+@router.callback_query(F.data == "mining_back")
+async def cb_mining_back(call: CallbackQuery):
+    user = get_user(call.from_user.id)
+    mining = get_user_mining(call.from_user.id)
+    await call.message.edit_text(
+        f"⛏️ <b>Cloud Mining</b>\n\n"
+        f"💰 Balansingiz: <b>{user['balance']:,.0f} UZS</b>",
+        reply_markup=mining_main_kb()
+    )
+
+
+async def mining_payout_loop(bot):
+    """Har soatda mining daromadini to'lash"""
+    while True:
+        try:
+            miners = get_all_active_miners()
+            now = datetime.now()
+
+            for miner in miners:
+                tg_id, hourly_income, last_payout, expires_at = miner
+
+                # Muddat tugaganmi
+                expires = datetime.fromisoformat(expires_at)
+                if now > expires:
+                    stop_mining(tg_id)
+                    try:
+                        await bot.send_message(
+                            tg_id,
+                            "⏰ <b>Mining muddati tugadi!</b>\n\n"
+                            "Yangi tarif tanlash uchun ⛏️ Cloud Mining ga kiring."
+                        )
+                    except Exception:
+                        pass
+                    continue
+
+                # Oxirgi to'lovdan necha soat o'tgan
+                last = datetime.fromisoformat(last_payout)
+                hours_passed = (now - last).total_seconds() / 3600
+
+                if hours_passed >= 1:
+                    payout_hours = int(hours_passed)
+                    # hourly_income endi UZS da
+                    amount_uzs = hourly_income * payout_hours
+
+                    add_mining_earnings(tg_id, amount_uzs)
+
+                    try:
+                        await bot.send_message(
+                            tg_id,
+                            f"⛏️ <b>Mining daromad!</b>\n\n"
+                            f"💰 +{amount_uzs:,.0f} UZS\n"
+                            f"⏰ {payout_hours} soatlik daromad\n\n"
+                            f"✅ Balansga qo'shildi!"
+                        )
+                    except Exception:
+                        pass
+
+        except Exception:
+            pass
+
+        await asyncio.sleep(1800)  # Har 30 daqiqada tekshirish
