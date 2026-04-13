@@ -134,7 +134,7 @@ async def cb_arb_start(call: CallbackQuery, state: FSMContext):
 
 @router.message(ArbState.waiting_amount)
 async def process_arb_amount(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -159,7 +159,7 @@ async def process_arb_amount(message: Message, state: FSMContext):
 
 @router.message(ArbState.waiting_min_profit)
 async def process_arb_min_profit(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return

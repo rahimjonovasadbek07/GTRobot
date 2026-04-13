@@ -157,7 +157,7 @@ async def cb_activate_bot(call: CallbackQuery, state: FSMContext):
 
 @router.message(AutoState.waiting_amount)
 async def process_auto_amount(message: Message, state: FSMContext):
-    if "Bekor" in message.text:
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -179,7 +179,7 @@ async def process_auto_amount(message: Message, state: FSMContext):
 
 @router.message(AutoState.waiting_min_profit)
 async def process_min_profit(message: Message, state: FSMContext):
-    if "Bekor" in message.text:
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -350,7 +350,7 @@ async def cb_set_api(call: CallbackQuery, state: FSMContext):
 
 @router.message(ApiState.waiting_api_key)
 async def process_api_key(message: Message, state: FSMContext):
-    if "Bekor" in message.text:
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -365,7 +365,7 @@ async def process_api_key(message: Message, state: FSMContext):
 
 @router.message(ApiState.waiting_secret_key)
 async def process_secret_key(message: Message, state: FSMContext):
-    if "Bekor" in message.text:
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return

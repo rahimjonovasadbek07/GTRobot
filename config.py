@@ -12,8 +12,8 @@ MEXC_API_BASE = "https://api.mexc.com"
 MEXC_FUTURES_BASE = "https://contract.mexc.com"
 
 TARIFF_PRICES = {
-    "daily": 10000,
-    "monthly": 200000
+    "daily": 5.0,      # 5 USDT kunlik
+    "monthly": 50.0    # 50 USDT oylik
 }
 
 DB_PATH = "gtrobot.db"

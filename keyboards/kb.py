@@ -27,8 +27,8 @@ def admin_menu() -> ReplyKeyboardMarkup:
 
 def tariff_keyboard(daily_price, monthly_price) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text=f"📅 Kunlik — {int(daily_price):,} UZS", callback_data="buy_daily"))
-    kb.add(InlineKeyboardButton(text=f"📆 Oylik — {int(monthly_price):,} UZS", callback_data="buy_monthly"))
+    kb.add(InlineKeyboardButton(text=f"📅 Kunlik — {daily_price:.2f} USDT", callback_data="buy_daily"))
+    kb.add(InlineKeyboardButton(text=f"📆 Oylik — {monthly_price:.2f} USDT", callback_data="buy_monthly"))
     kb.adjust(1)
     return kb.as_markup()
 
@@ -95,7 +95,10 @@ def copy_trading_keyboard() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def cancel_keyboard() -> ReplyKeyboardMarkup:
+def cancel_keyboard(lang="uz") -> ReplyKeyboardMarkup:
+    from utils.lang import t
     kb = ReplyKeyboardBuilder()
-    kb.add(KeyboardButton(text="❌ Bekor qilish"))
+    kb.add(KeyboardButton(text=t(lang, "cancel")))
     return kb.as_markup(resize_keyboard=True, one_time_keyboard=True)
+
+CANCEL_TEXTS = ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]

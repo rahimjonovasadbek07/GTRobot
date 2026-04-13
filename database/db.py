@@ -156,8 +156,8 @@ def init_db():
     """)
 
     # Standart narxlar
-    c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("daily", 10000))
-    c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("monthly", 200000))
+    c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("daily", 5.0))
+    c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("monthly", 50.0))
 
     # Standart to'lov rekvizitlari
     c.execute("INSERT OR IGNORE INTO payment_settings (id, wallet_address, network, currency) VALUES (1, '', 'TRC20', 'USDT')")

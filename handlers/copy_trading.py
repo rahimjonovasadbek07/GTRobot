@@ -44,6 +44,14 @@ class CopyState(StatesGroup):
 
 @router.message(F.text == "📊 Copy Trading")
 async def show_copy_trading(message: Message):
+    from database.db import has_active_tariff
+    from utils.lang import t
+    from database.db import get_user as _get_user
+    _u = _get_user(message.from_user.id)
+    _lang = _u.get("lang", "uz") if _u else "uz"
+    if not has_active_tariff(message.from_user.id):
+        await message.answer(t(_lang, "no_tariff"))
+        return
     user_id = message.from_user.id
     is_running = user_id in copy_tasks and not copy_tasks[user_id].done()
     status = "✅ Avtomatik nusxalash yoqiq" if is_running else "⏹ Avtomatik nusxalash o'chiq"
@@ -196,7 +204,7 @@ async def cb_auto_start(call: CallbackQuery, state: FSMContext):
 
 @router.message(CopyState.waiting_amount)
 async def process_copy_amount(message: Message, state: FSMContext):
-    if "Bekor" in message.text:
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return

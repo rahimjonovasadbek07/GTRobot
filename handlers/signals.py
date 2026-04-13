@@ -108,7 +108,7 @@ async def admin_send_signal(message: Message, state: FSMContext):
 
 @router.message(SignalState.waiting_signal)
 async def process_signal(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=admin_menu())
         return

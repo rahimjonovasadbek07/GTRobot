@@ -83,7 +83,7 @@ async def change_tariff(message: Message, state: FSMContext):
 
 @router.message(AdminState.waiting_tariff_type)
 async def proc_tariff_type(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -98,7 +98,7 @@ async def proc_tariff_type(message: Message, state: FSMContext):
 
 @router.message(AdminState.waiting_tariff_price)
 async def proc_tariff_price(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -143,7 +143,7 @@ async def cb_set_wallet(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_wallet)
 async def proc_wallet(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -177,7 +177,7 @@ async def cb_set_card(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_card)
 async def proc_card(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -194,7 +194,7 @@ async def cb_set_card_owner(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_card_owner)
 async def proc_card_owner(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -264,7 +264,7 @@ async def cb_mining_field(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_mining_value)
 async def proc_mining_value(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -313,7 +313,7 @@ async def cb_set_referral(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_referral_bonus)
 async def proc_referral_bonus(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -334,7 +334,7 @@ async def cb_set_support(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_support_text)
 async def proc_support_text(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -353,7 +353,7 @@ async def cb_set_signal_name(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_signal_name)
 async def proc_signal_name(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -390,7 +390,7 @@ async def cb_add_channel(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminState.waiting_channel_id)
 async def proc_channel_id(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -401,7 +401,7 @@ async def proc_channel_id(message: Message, state: FSMContext):
 
 @router.message(AdminState.waiting_channel_name)
 async def proc_channel_name(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
@@ -441,7 +441,7 @@ async def broadcast_menu(message: Message, state: FSMContext):
 
 @router.message(AdminState.waiting_broadcast)
 async def proc_broadcast(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return

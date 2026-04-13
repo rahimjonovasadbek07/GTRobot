@@ -207,8 +207,8 @@ async def show_balance(message: Message):
     await message.answer(
         f"💰 <b>Hisob</b>\n\n"
         f"👤 {message.from_user.full_name}\n"
-        f"💵 Balans: <b>{user['balance']:,.0f} UZS</b>\n"
-        f"🎁 Referral: <b>{user.get('referral_bonus', 0):,.0f} UZS</b>\n\n"
+        f"💵 Balans: <b>{user['balance']:.4f} USDT</b>\n"
+        f"🎁 Referral: <b>{user.get('referral_bonus', 0):.4f} USDT</b>\n\n"
         f"📋 Tarif: {tariff_info}\n"
         f"🔑 API: {api_status}\n"
         f"🤖 Bot: {bot_status}",
@@ -250,7 +250,7 @@ async def cb_topup_custom(call: CallbackQuery, state: FSMContext):
 
 @router.message(TopupState.waiting_amount)
 async def proc_custom_amount(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -275,7 +275,7 @@ async def proc_custom_amount(message: Message, state: FSMContext):
 
 @router.message(TopupState.waiting_receipt)
 async def proc_receipt(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
@@ -321,7 +321,7 @@ async def show_tariff(message: Message):
 
     await message.answer(
         f"📋 <b>Tarif rejalari</b>\n\n"
-        f"💰 Balans: <b>{balance:,.0f} UZS</b>\n\n"
+        f"💰 Balans: <b>{balance:.4f} USDT</b>\n\n"
         f"📅 <b>Kunlik</b> — {int(daily):,} UZS (24 soat)\n"
         f"📆 <b>Oylik</b> — {int(monthly):,} UZS (30 kun)\n\n"
         f"💳 Avval balansni to'ldiring.",
