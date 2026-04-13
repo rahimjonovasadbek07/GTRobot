@@ -625,3 +625,42 @@ def get_mining_stats(tg_id):
 # Mining plan functions for backward compat
 def get_mining_plans():
     return get_mining_plans_db()
+
+
+# ===== SOZLAMALAR (Admin) =====
+def get_bot_settings():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS bot_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+    defaults = {
+        "referral_bonus": "5000",
+        "support_username": "@grandtrade_admin",
+        "support_text": "📱 Admin: @grandtrade_admin\n⏰ 9:00 — 22:00",
+    }
+    for k, v in defaults.items():
+        c.execute("INSERT OR IGNORE INTO bot_settings (key, value) VALUES (?, ?)", (k, v))
+    conn.commit()
+
+    c.execute("SELECT key, value FROM bot_settings")
+    rows = c.fetchall()
+    conn.close()
+    return {r[0]: r[1] for r in rows}
+
+
+def set_bot_setting(key: str, value: str):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS bot_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    """)
+    c.execute("INSERT OR REPLACE INTO bot_settings (key, value) VALUES (?, ?)", (key, value))
+    conn.commit()
+    conn.close()

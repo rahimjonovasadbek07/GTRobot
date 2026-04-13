@@ -23,7 +23,11 @@ class SignalState(StatesGroup):
 
 def format_signal_message(symbol: str, direction: str, leverage: int,
                            entry: float, tp: float, sl: float,
-                           trader_name: str = "GTRobot Signal") -> str:
+                           trader_name: str = None) -> str:
+    if trader_name is None:
+        from database.db import get_bot_settings
+        s = get_bot_settings()
+        trader_name = s.get("signal_name", "GTRobot Signal")
     """Klient formatida signal xabari"""
     dir_emoji = "🟢" if direction == "LONG" else "🔴"
 

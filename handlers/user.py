@@ -22,7 +22,12 @@ from utils.lang import t, get_lang_keyboard, LANGS
 from config import ADMIN_IDS, REQUIRED_CHANNELS
 
 router = Router()
-REFERRAL_BONUS = 5000
+def get_referral_bonus():
+    from database.db import get_bot_settings
+    s = get_bot_settings()
+    return int(s.get("referral_bonus", "5000"))
+
+REFERRAL_BONUS = 5000  # default
 
 
 class TopupState(StatesGroup):
@@ -90,7 +95,7 @@ async def cmd_start(message: Message, state: FSMContext):
     register_user(user.id, f"@{user.username}" if user.username else "—", user.full_name, referred_by)
 
     if not existing and referred_by:
-        update_balance(referred_by, REFERRAL_BONUS)
+        update_balance(referred_by, get_referral_bonus())
         try:
             ref_lang = get_user_lang(referred_by)
             await message.bot.send_message(
@@ -351,8 +356,7 @@ async def cb_buy_tariff(call: CallbackQuery):
 # ===== SUPPORT =====
 @router.message(F.text.in_(["🆘 Qo'llab-quvvatlash", "🆘 Поддержка", "🆘 Support"]))
 async def show_support(message: Message):
-    await message.answer(
-        "🆘 <b>Qo'llab-quvvatlash / Поддержка / Support</b>\n\n"
-        "📱 Admin: @grandtrade_admin\n"
-        "⏰ 9:00 — 22:00"
-    )
+    from database.db import get_bot_settings
+    s = get_bot_settings()
+    support_text = s.get("support_text", "📱 Admin: @grandtrade_admin\n⏰ 9:00 — 22:00")
+    await message.answer(f"🆘 <b>Qo'llab-quvvatlash</b>\n\n{support_text}")

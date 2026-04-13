@@ -18,9 +18,10 @@ def admin_menu() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
     kb.row(KeyboardButton(text="📡 Signal yuborish"), KeyboardButton(text="📢 Kanal boshqaruv"))
     kb.row(KeyboardButton(text="💵 Tarif narxi"), KeyboardButton(text="💳 To'lov rekvizit"))
-    kb.row(KeyboardButton(text="⛏️ Mining sozlama"), KeyboardButton(text="📊 Statistika"))
-    kb.row(KeyboardButton(text="👥 Foydalanuvchilar"), KeyboardButton(text="✅ To'lov tasdiqlash"))
-    kb.row(KeyboardButton(text="📨 Xabar yuborish"), KeyboardButton(text="🔙 Asosiy menyu"))
+    kb.row(KeyboardButton(text="⛏️ Mining sozlama"), KeyboardButton(text="🔧 Bot sozlama"))
+    kb.row(KeyboardButton(text="📊 Statistika"), KeyboardButton(text="✅ To'lov tasdiqlash"))
+    kb.row(KeyboardButton(text="👥 Foydalanuvchilar"), KeyboardButton(text="📨 Xabar yuborish"))
+    kb.row(KeyboardButton(text="🔙 Asosiy menyu"))
     return kb.as_markup(resize_keyboard=True)
 
 

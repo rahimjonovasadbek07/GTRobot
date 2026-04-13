@@ -15,7 +15,8 @@ from database.db import (
     get_channels, add_channel, remove_channel,
     get_revenue_stats, confirm_payment, get_user,
     get_payment_settings, update_payment_settings,
-    get_mining_plans_db, update_mining_plan
+    get_mining_plans_db, update_mining_plan,
+    get_bot_settings, set_bot_setting
 )
 from keyboards.kb import admin_menu, main_menu, cancel_keyboard, channels_keyboard
 from config import ADMIN_IDS
@@ -28,23 +29,20 @@ def is_admin(user_id):
 
 
 class AdminState(StatesGroup):
-    # Tarif
     waiting_tariff_type = State()
     waiting_tariff_price = State()
-    # Kanal
     waiting_channel_id = State()
     waiting_channel_name = State()
-    # Broadcast
     waiting_broadcast = State()
-    # To'lov rekvizit
     waiting_wallet = State()
     waiting_network = State()
     waiting_card = State()
     waiting_card_owner = State()
-    # Mining
-    waiting_mining_plan = State()
     waiting_mining_field = State()
     waiting_mining_value = State()
+    waiting_referral_bonus = State()
+    waiting_support_text = State()
+    waiting_signal_name = State()
 
 
 # ===== ADMIN MENYU =====
@@ -60,7 +58,10 @@ async def cmd_admin(message: Message, state: FSMContext):
 @router.message(F.text == "🔙 Asosiy menyu")
 async def back_main(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("Asosiy menyu:", reply_markup=main_menu())
+    from database.db import get_user
+    user = get_user(message.from_user.id)
+    lang = user.get("lang", "uz") if user else "uz"
+    await message.answer("Asosiy menyu:", reply_markup=main_menu(lang))
 
 
 # ===== 1. TARIF NARXI =====
@@ -91,7 +92,7 @@ async def proc_tariff_type(message: Message, state: FSMContext):
         await message.answer("❌ <b>daily</b> yoki <b>monthly</b> yozing:")
         return
     await state.update_data(tariff_type=t)
-    await message.answer(f"💰 Yangi narx (UZS):", reply_markup=cancel_keyboard())
+    await message.answer("💰 Yangi narx (UZS):", reply_markup=cancel_keyboard())
     await state.set_state(AdminState.waiting_tariff_price)
 
 
@@ -120,7 +121,7 @@ async def payment_settings_menu(message: Message):
     s = get_payment_settings()
     kb = InlineKeyboardBuilder()
     kb.add(InlineKeyboardButton(text="💎 USDT Hamyon", callback_data="set_wallet"))
-    kb.add(InlineKeyboardButton(text="🌐 Tarmoq (TRC20/ERC20)", callback_data="set_network"))
+    kb.add(InlineKeyboardButton(text="🌐 Tarmoq", callback_data="set_network"))
     kb.add(InlineKeyboardButton(text="💳 Karta raqami", callback_data="set_card"))
     kb.add(InlineKeyboardButton(text="👤 Karta egasi", callback_data="set_card_owner"))
     kb.adjust(2)
@@ -148,11 +149,11 @@ async def proc_wallet(message: Message, state: FSMContext):
         return
     update_payment_settings(wallet_address=message.text.strip())
     await state.clear()
-    await message.answer("✅ Hamyon manzili yangilandi!", reply_markup=admin_menu())
+    await message.answer("✅ Hamyon yangilandi!", reply_markup=admin_menu())
 
 
 @router.callback_query(F.data == "set_network")
-async def cb_set_network(call: CallbackQuery, state: FSMContext):
+async def cb_set_network(call: CallbackQuery):
     kb = InlineKeyboardBuilder()
     for net in ["TRC20", "ERC20", "BEP20", "SOL"]:
         kb.add(InlineKeyboardButton(text=net, callback_data=f"network_{net}"))
@@ -161,15 +162,11 @@ async def cb_set_network(call: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data.startswith("network_"))
-async def cb_network_select(call: CallbackQuery):
+async def cb_network(call: CallbackQuery):
     network = call.data.split("_")[1]
     update_payment_settings(network=network)
-    await call.answer(f"✅ Tarmoq: {network}")
-    s = get_payment_settings()
-    await call.message.edit_text(
-        f"✅ Tarmoq <b>{network}</b> ga o'zgartirildi!\n\n"
-        f"💎 Hamyon: <code>{s['wallet_address'] or 'Kiritilmagan'}</code>"
-    )
+    await call.answer(f"✅ {network}")
+    await call.message.edit_text(f"✅ Tarmoq: <b>{network}</b>")
 
 
 @router.callback_query(F.data == "set_card")
@@ -186,7 +183,7 @@ async def proc_card(message: Message, state: FSMContext):
         return
     update_payment_settings(card_number=message.text.strip())
     await state.clear()
-    await message.answer("✅ Karta raqami yangilandi!", reply_markup=admin_menu())
+    await message.answer("✅ Karta yangilandi!", reply_markup=admin_menu())
 
 
 @router.callback_query(F.data == "set_card_owner")
@@ -218,10 +215,10 @@ async def mining_settings(message: Message):
         text += (
             f"<b>{p['name']}</b>\n"
             f"  Soatlik: {p['hourly_uzs']:,} UZS\n"
-            f"  Kunlik narx: {p['daily_price']:,} | Daromad: {p['daily_earn']:,}\n"
-            f"  Oylik narx: {p['monthly_price']:,} | Daromad: {p['monthly_earn']:,}\n\n"
+            f"  Kunlik: {p['daily_price']:,} → {p['daily_earn']:,}\n"
+            f"  Oylik: {p['monthly_price']:,} → {p['monthly_earn']:,}\n\n"
         )
-        kb.add(InlineKeyboardButton(text=f"✏️ {p['name']} o'zgartirish", callback_data=f"edit_mining_{p['id']}"))
+        kb.add(InlineKeyboardButton(text=f"✏️ {p['name']}", callback_data=f"edit_mining_{p['id']}"))
     kb.adjust(1)
     await message.answer(text, reply_markup=kb.as_markup())
 
@@ -234,23 +231,16 @@ async def cb_edit_mining(call: CallbackQuery, state: FSMContext):
     if not plan:
         await call.answer("❌ Topilmadi!")
         return
-
     await state.update_data(mining_plan_id=plan_id)
-
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text="💰 Soatlik daromad", callback_data=f"mfield_hourly_{plan_id}"))
+    kb.add(InlineKeyboardButton(text="💰 Soatlik", callback_data=f"mfield_hourly_{plan_id}"))
     kb.add(InlineKeyboardButton(text="📅 Kunlik narx", callback_data=f"mfield_dprice_{plan_id}"))
     kb.add(InlineKeyboardButton(text="📅 Kunlik daromad", callback_data=f"mfield_dearn_{plan_id}"))
     kb.add(InlineKeyboardButton(text="📆 Oylik narx", callback_data=f"mfield_mprice_{plan_id}"))
     kb.add(InlineKeyboardButton(text="📆 Oylik daromad", callback_data=f"mfield_mearn_{plan_id}"))
     kb.adjust(2)
-
     await call.message.edit_text(
-        f"✏️ <b>{plan['name']}</b>\n\n"
-        f"Soatlik: {plan['hourly_uzs']:,} UZS\n"
-        f"Kunlik: {plan['daily_price']:,} → {plan['daily_earn']:,}\n"
-        f"Oylik: {plan['monthly_price']:,} → {plan['monthly_earn']:,}\n\n"
-        "Qaysi maydonni o'zgartirmoqchisiz?",
+        f"✏️ <b>{plan['name']}</b>\n\nQaysi maydonni o'zgartirmoqchisiz?",
         reply_markup=kb.as_markup()
     )
 
@@ -281,23 +271,98 @@ async def proc_mining_value(message: Message, state: FSMContext):
     try:
         value = int(message.text.replace(" ", "").replace(",", ""))
         data = await state.get_data()
-        field = data["mining_field"]
-        plan_id = data["mining_plan_id"]
         field_map = {
-            "hourly": "hourly_uzs",
-            "dprice": "daily_price",
-            "dearn": "daily_earn",
-            "mprice": "monthly_price",
-            "mearn": "monthly_earn",
+            "hourly": "hourly_uzs", "dprice": "daily_price",
+            "dearn": "daily_earn", "mprice": "monthly_price", "mearn": "monthly_earn",
         }
-        update_mining_plan(plan_id, **{field_map[field]: value})
+        update_mining_plan(data["mining_plan_id"], **{field_map[data["mining_field"]]: value})
         await state.clear()
-        await message.answer(f"✅ Mining sozlamasi yangilandi: {value:,} UZS", reply_markup=admin_menu())
+        await message.answer(f"✅ Yangilandi: {value:,} UZS", reply_markup=admin_menu())
     except ValueError:
         await message.answer("❌ Raqam kiriting.")
 
 
-# ===== 4. KANAL BOSHQARUVI =====
+# ===== 4. BOT SOZLAMALARI =====
+@router.message(F.text == "🔧 Bot sozlama")
+async def bot_settings_menu(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    s = get_bot_settings()
+    kb = InlineKeyboardBuilder()
+    kb.add(InlineKeyboardButton(text="🎁 Referral bonus", callback_data="set_referral"))
+    kb.add(InlineKeyboardButton(text="🆘 Qo'llab-quvvatlash", callback_data="set_support"))
+    kb.add(InlineKeyboardButton(text="👤 Signal nomi", callback_data="set_signal_name"))
+    kb.adjust(1)
+    await message.answer(
+        f"🔧 <b>Bot sozlamalari</b>\n\n"
+        f"🎁 Referral bonus: <b>{s.get('referral_bonus', '5000')} UZS</b>\n"
+        f"👤 Signal nomi: <b>{s.get('signal_name', 'GTRobot Signal')}</b>\n"
+        f"🆘 Qo'llab-quvvatlash:\n{s.get('support_text', '@grandtrade_admin')}",
+        reply_markup=kb.as_markup()
+    )
+
+
+@router.callback_query(F.data == "set_referral")
+async def cb_set_referral(call: CallbackQuery, state: FSMContext):
+    s = get_bot_settings()
+    await call.message.edit_text(
+        f"🎁 Referral bonus miqdorini kiriting (UZS):\n\nJoriy: {s.get('referral_bonus', '5000')} UZS"
+    )
+    await state.set_state(AdminState.waiting_referral_bonus)
+
+
+@router.message(AdminState.waiting_referral_bonus)
+async def proc_referral_bonus(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    try:
+        bonus = int(message.text.replace(" ", "").replace(",", ""))
+        set_bot_setting("referral_bonus", str(bonus))
+        await state.clear()
+        await message.answer(f"✅ Referral bonus: <b>{bonus:,} UZS</b>", reply_markup=admin_menu())
+    except ValueError:
+        await message.answer("❌ Raqam kiriting.")
+
+
+@router.callback_query(F.data == "set_support")
+async def cb_set_support(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text("🆘 Qo'llab-quvvatlash matnini kiriting:")
+    await state.set_state(AdminState.waiting_support_text)
+
+
+@router.message(AdminState.waiting_support_text)
+async def proc_support_text(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    set_bot_setting("support_text", message.text.strip())
+    await state.clear()
+    await message.answer("✅ Qo'llab-quvvatlash matni yangilandi!", reply_markup=admin_menu())
+
+
+@router.callback_query(F.data == "set_signal_name")
+async def cb_set_signal_name(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text(
+        "👤 Signal yuborilganda ko'rinadigan treyder nomini kiriting:\n\nMisol: Grand Trade"
+    )
+    await state.set_state(AdminState.waiting_signal_name)
+
+
+@router.message(AdminState.waiting_signal_name)
+async def proc_signal_name(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    set_bot_setting("signal_name", message.text.strip())
+    await state.clear()
+    await message.answer(f"✅ Signal nomi: <b>{message.text.strip()}</b>", reply_markup=admin_menu())
+
+
+# ===== 5. KANAL BOSHQARUVI =====
 @router.message(F.text == "📢 Kanal boshqaruv")
 async def manage_channels(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
@@ -316,7 +381,10 @@ async def manage_channels(message: Message, state: FSMContext):
 @router.callback_query(F.data == "add_channel")
 async def cb_add_channel(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.edit_text("➕ Kanal ID kiriting:\nMisol: <code>@kanal</code> yoki <code>-1001234567890</code>")
+    await call.message.edit_text(
+        "➕ Kanal ID kiriting:\n"
+        "Misol: <code>@kanal</code> yoki <code>-1001234567890</code>"
+    )
     await state.set_state(AdminState.waiting_channel_id)
 
 
@@ -357,13 +425,17 @@ async def cb_del_channel(call: CallbackQuery):
     await call.message.edit_text("📢 <b>Kanallar:</b>", reply_markup=channels_keyboard(channels))
 
 
-# ===== 5. BROADCAST =====
+# ===== 6. BROADCAST =====
 @router.message(F.text == "📨 Xabar yuborish")
 async def broadcast_menu(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         return
     await state.clear()
-    await message.answer("📨 Barcha foydalanuvchilarga yuboriladigan xabarni kiriting:", reply_markup=cancel_keyboard())
+    await message.answer(
+        "📨 Barcha foydalanuvchilarga xabar kiriting:\n\n"
+        "✅ Rasm, video, matn — hammasi yuboriladi!",
+        reply_markup=cancel_keyboard()
+    )
     await state.set_state(AdminState.waiting_broadcast)
 
 
@@ -378,7 +450,26 @@ async def proc_broadcast(message: Message, state: FSMContext):
     failed = 0
     for user in users:
         try:
-            await message.bot.send_message(user[0], f"📢 <b>GTRobot:</b>\n\n{message.text}")
+            # Rasm, video yoki matn
+            if message.photo:
+                await message.bot.send_photo(
+                    user[0], message.photo[-1].file_id,
+                    caption=message.caption or ""
+                )
+            elif message.video:
+                await message.bot.send_video(
+                    user[0], message.video.file_id,
+                    caption=message.caption or ""
+                )
+            elif message.document:
+                await message.bot.send_document(
+                    user[0], message.document.file_id,
+                    caption=message.caption or ""
+                )
+            else:
+                await message.bot.send_message(
+                    user[0], f"📢 <b>GTRobot:</b>\n\n{message.text}"
+                )
             sent += 1
         except Exception:
             failed += 1
@@ -386,7 +477,7 @@ async def proc_broadcast(message: Message, state: FSMContext):
     await state.clear()
 
 
-# ===== 6. STATISTIKA =====
+# ===== 7. STATISTIKA =====
 @router.message(F.text == "📊 Statistika")
 async def show_stats(message: Message):
     if not is_admin(message.from_user.id):
@@ -403,7 +494,7 @@ async def show_stats(message: Message):
     )
 
 
-# ===== 7. FOYDALANUVCHILAR =====
+# ===== 8. FOYDALANUVCHILAR =====
 @router.message(F.text == "👥 Foydalanuvchilar")
 async def show_users(message: Message):
     if not is_admin(message.from_user.id):
@@ -430,9 +521,9 @@ async def show_users(message: Message):
     await message.answer("\n".join(lines))
 
 
-# ===== 8. TO'LOV TASDIQLASH =====
+# ===== 9. TO'LOV TASDIQLASH =====
 @router.message(F.text == "✅ To'lov tasdiqlash")
-async def payment_confirm_info(message: Message):
+async def payment_info(message: Message):
     if not is_admin(message.from_user.id):
         return
     await message.answer("✅ Foydalanuvchi chek yuborganda tasdiqlash tugmasi chiqadi.")
@@ -463,7 +554,7 @@ async def cb_confirm_pay(call: CallbackQuery):
         set_tariff(tg_id, tariff_type, expires)
         label = "Kunlik" if tariff_type == "daily" else "Oylik"
         try:
-            await call.bot.send_message(tg_id, f"✅ <b>{label} tarif faollashtirildi!</b>\n\n📅 {expires[:10]} gacha")
+            await call.bot.send_message(tg_id, f"✅ <b>{label} tarif faollashtirildi!</b>")
         except Exception:
             pass
     new_caption = (call.message.caption or "") + f"\n\n✅ TASDIQLANDI ({call.from_user.full_name})"
@@ -481,7 +572,7 @@ async def cb_reject_pay(call: CallbackQuery):
     parts = call.data.split("_")
     tg_id = int(parts[3])
     try:
-        await call.bot.send_message(tg_id, "❌ <b>To'lovingiz rad etildi.</b>\n\nAdmin bilan bog'laning.")
+        await call.bot.send_message(tg_id, "❌ <b>To'lovingiz rad etildi.</b>")
     except Exception:
         pass
     new_caption = (call.message.caption or "") + "\n\n❌ RAD ETILDI"
