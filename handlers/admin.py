@@ -73,8 +73,8 @@ async def change_tariff(message: Message, state: FSMContext):
     prices = get_tariff_prices()
     await message.answer(
         f"💵 <b>Joriy narxlar:</b>\n\n"
-        f"📅 Kunlik: {prices.get('daily', 10000):,.0f} UZS\n"
-        f"📆 Oylik: {prices.get('monthly', 200000):,.0f} UZS\n\n"
+        f"📅 Kunlik: {prices.get('daily', 5.0):.2f} USDT\n"
+        f"📆 Oylik: {prices.get('monthly', 50.0):.2f} USDT\n\n"
         "<b>daily</b> yoki <b>monthly</b> yozing:",
         reply_markup=cancel_keyboard()
     )
@@ -214,9 +214,9 @@ async def mining_settings(message: Message):
     for p in plans:
         text += (
             f"<b>{p['name']}</b>\n"
-            f"  Soatlik: {p['hourly_uzs']:,} UZS\n"
-            f"  Kunlik: {p['daily_price']:,} → {p['daily_earn']:,}\n"
-            f"  Oylik: {p['monthly_price']:,} → {p['monthly_earn']:,}\n\n"
+            f"  Soatlik: {p['hourly_uzs']} USDT\n"
+            f"  Kunlik: {p['daily_price']} → {p['daily_earn']} USDT\n"
+            f"  Oylik: {p['monthly_price']} → {p['monthly_earn']} USDT\n\n"
         )
         kb.add(InlineKeyboardButton(text=f"✏️ {p['name']}", callback_data=f"edit_mining_{p['id']}"))
     kb.adjust(1)
@@ -382,8 +382,10 @@ async def manage_channels(message: Message, state: FSMContext):
 async def cb_add_channel(call: CallbackQuery, state: FSMContext):
     await state.clear()
     await call.message.edit_text(
-        "➕ Kanal ID kiriting:\n"
-        "Misol: <code>@kanal</code> yoki <code>-1001234567890</code>"
+        "➕ Kanal ID kiriting:\n\n"
+        "• Public kanal: <code>@kanalingiz</code>\n"
+        "• Private kanal: <code>-1002519689075</code>\n\n"
+        "<b>Muhim:</b> Bot kanalga admin bo'lishi kerak!"
     )
     await state.set_state(AdminState.waiting_channel_id)
 

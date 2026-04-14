@@ -163,10 +163,11 @@ def init_db():
     c.execute("INSERT OR IGNORE INTO payment_settings (id, wallet_address, network, currency) VALUES (1, '', 'TRC20', 'USDT')")
 
     # Standart mining sozlamalari
+    # Mining USDT da: (plan_id, name, hourly, daily_price, weekly_price, monthly_price, daily_earn, weekly_earn, monthly_earn)
     default_plans = [
-        (1, "⛏️ Miner v1", 500, 10000, 60000, 200000, 12000, 84000, 360000),
-        (2, "⛏️ Miner v2", 1500, 30000, 180000, 600000, 36000, 252000, 1080000),
-        (3, "⛏️ Miner v3", 5000, 100000, 600000, 2000000, 120000, 840000, 3600000),
+        (1, "⛏️ Miner v1", 0.0005, 1.0, 6.0, 20.0, 0.012, 0.084, 0.36),
+        (2, "⛏️ Miner v2", 0.002, 3.0, 18.0, 60.0, 0.048, 0.336, 1.44),
+        (3, "⛏️ Miner v3", 0.008, 10.0, 60.0, 200.0, 0.192, 1.344, 5.76),
     ]
     for p in default_plans:
         c.execute("""

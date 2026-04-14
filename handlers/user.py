@@ -145,6 +145,17 @@ async def cmd_start(message: Message, state: FSMContext):
         )
         return
 
+    # Obunani har safar tekshirish
+    subscribed = await check_subscribed(message.bot, user.id)
+    if not subscribed:
+        db_u = get_user(user.id)
+        lang2 = db_u.get("lang", "uz") if db_u else "uz"
+        await message.answer(
+            t(lang2, "subscribe_required"),
+            reply_markup=sub_keyboard()
+        )
+        return
+
     db_user = get_user(user.id)
     lang = db_user.get("lang", "uz")
     tariff_status = t(lang, "tariff_no")
