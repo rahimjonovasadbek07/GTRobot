@@ -41,17 +41,39 @@ def get_user_lang(tg_id):
 
 
 async def check_subscribed(bot: Bot, user_id: int) -> bool:
-    channels = REQUIRED_CHANNELS
-    if not channels:
+    """Config va DB dan kanallarni tekshirish"""
+    from database.db import get_channels
+    
+    # Config dan kanallar
+    channels_to_check = list(REQUIRED_CHANNELS)
+    
+    # DB dan ham kanallar
+    db_channels = get_channels()
+    for ch in db_channels:
+        channels_to_check.append({"id": ch[1], "name": ch[2]})
+    
+    if not channels_to_check:
         return True
-    for ch in channels:
+    
+    for ch in channels_to_check:
+        ch_id = ch["id"] if isinstance(ch, dict) else ch[1]
         try:
-            member = await bot.get_chat_member(ch["id"], user_id)
+            member = await bot.get_chat_member(ch_id, user_id)
             if member.status in ["left", "kicked", "restricted"]:
                 return False
         except Exception:
             pass
     return True
+
+
+def get_all_channels_for_sub():
+    """Barcha kanallar ro'yxati (config + DB)"""
+    from database.db import get_channels
+    channels = list(REQUIRED_CHANNELS)
+    db_channels = get_channels()
+    for ch in db_channels:
+        channels.append({"id": ch[1], "name": ch[2]})
+    return channels
 
 
 # ===== TIL TANLASH =====
@@ -100,7 +122,7 @@ async def cmd_start(message: Message, state: FSMContext):
             ref_lang = get_user_lang(referred_by)
             await message.bot.send_message(
                 referred_by,
-                f"🎁 <b>Referral bonus!</b>\n\n{user.full_name} qo'shildi!\n💰 +{REFERRAL_BONUS:,} UZS"
+                f"🎁 <b>Referral bonus!</b>\n\n{user.full_name} qo'shildi!\n💰 +{get_referral_bonus():.0f} USDT"
             )
         except Exception:
             pass

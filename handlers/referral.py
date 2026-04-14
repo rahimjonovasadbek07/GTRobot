@@ -7,10 +7,14 @@ from database.db import get_user, get_referral_stats
 
 router = Router()
 
-REFERRAL_BONUS = 5000  # 5000 UZS bonus
+
+def get_referral_bonus_val():
+    from database.db import get_bot_settings
+    s = get_bot_settings()
+    return float(s.get("referral_bonus", "0.5"))
 
 
-@router.message(F.text == "👥 Referral")
+@router.message(F.text.in_(["👥 Referral", "👥 Реферал", "👥 Referral"]))
 async def show_referral(message: Message):
     user = get_user(message.from_user.id)
     if not user:
@@ -19,6 +23,8 @@ async def show_referral(message: Message):
 
     ref_code = user.get("referral_code", "—")
     stats = get_referral_stats(message.from_user.id)
+    bonus_val = get_referral_bonus_val()
+
     bot_username = (await message.bot.get_me()).username
     ref_link = f"https://t.me/{bot_username}?start=ref_{ref_code}"
 
@@ -28,9 +34,9 @@ async def show_referral(message: Message):
         f"<code>{ref_link}</code>\n\n"
         f"📊 <b>Statistika:</b>\n"
         f"👤 Taklif qilganlar: <b>{stats['count']} ta</b>\n"
-        f"💰 Referral bonus: <b>{stats['bonus']:,.0f} UZS</b>\n\n"
+        f"💰 Referral bonus: <b>{stats['bonus']:.4f} USDT</b>\n\n"
         f"🎁 <b>Qoidalar:</b>\n"
-        f"• Har bir do'stingiz ro'yxatdan o'tsa — <b>{REFERRAL_BONUS:,} UZS</b> bonus\n"
+        f"• Har bir do'stingiz ro'yxatdan o'tsa — <b>{bonus_val} USDT</b> bonus\n"
         f"• Bonus avtomatik balansingizga tushadi\n"
         f"• Havolani do'stlaringizga yuboring!"
     )

@@ -185,6 +185,7 @@ async def process_signal(message: Message, state: FSMContext):
             pass
 
     await state.clear()
+    from keyboards.kb import admin_menu
     await message.answer(
         f"✅ <b>Signal yuborildi!</b>\n\n"
         f"📨 Xabar: {sent} ta\n"
@@ -192,6 +193,7 @@ async def process_signal(message: Message, state: FSMContext):
         f"🆔 Signal: #{signal_id}",
         reply_markup=signal_keyboard(signal_id)
     )
+    await message.answer("Admin menyu:", reply_markup=admin_menu())
 
 
 # ===== SIGNALNI YOPISH =====

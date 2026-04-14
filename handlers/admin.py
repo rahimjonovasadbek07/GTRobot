@@ -107,7 +107,7 @@ async def proc_tariff_price(message: Message, state: FSMContext):
         data = await state.get_data()
         update_tariff_price(data["tariff_type"], price)
         label = "Kunlik" if data["tariff_type"] == "daily" else "Oylik"
-        await message.answer(f"✅ {label}: <b>{price:,.0f} UZS</b>", reply_markup=admin_menu())
+        await message.answer(f"✅ {label}: <b>{price:.4f} USDT</b>", reply_markup=admin_menu())
         await state.clear()
     except ValueError:
         await message.answer("❌ Raqam kiriting.")
@@ -295,7 +295,7 @@ async def bot_settings_menu(message: Message):
     kb.adjust(1)
     await message.answer(
         f"🔧 <b>Bot sozlamalari</b>\n\n"
-        f"🎁 Referral bonus: <b>{s.get('referral_bonus', '5000')} UZS</b>\n"
+        f"🎁 Referral bonus: <b>{s.get('referral_bonus', '0.5')} USDT</b>\n"
         f"👤 Signal nomi: <b>{s.get('signal_name', 'GTRobot Signal')}</b>\n"
         f"🆘 Qo'llab-quvvatlash:\n{s.get('support_text', '@grandtrade_admin')}",
         reply_markup=kb.as_markup()
@@ -318,10 +318,10 @@ async def proc_referral_bonus(message: Message, state: FSMContext):
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
     try:
-        bonus = int(message.text.replace(" ", "").replace(",", ""))
+        bonus = float(message.text.replace(" ", "").replace(",", ""))
         set_bot_setting("referral_bonus", str(bonus))
         await state.clear()
-        await message.answer(f"✅ Referral bonus: <b>{bonus:,} UZS</b>", reply_markup=admin_menu())
+        await message.answer(f"✅ Referral bonus: <b>{bonus} USDT</b>", reply_markup=admin_menu())
     except ValueError:
         await message.answer("❌ Raqam kiriting.")
 
@@ -489,7 +489,7 @@ async def show_stats(message: Message):
         f"📊 <b>Statistika</b>\n\n"
         f"👥 Jami: <b>{total}</b>\n"
         f"🤖 Faol bot: <b>{active}</b>\n\n"
-        f"💰 Daromad: <b>{revenue['total']:,.0f} UZS</b>\n"
+        f"💰 Daromad: <b>{revenue['total']:.4f} USDT</b>\n"
         f"✅ To'lovlar: <b>{revenue['count']}</b>"
     )
 
@@ -512,7 +512,7 @@ async def show_users(message: Message):
             f"━━━━━━━━━━━━━━━\n"
             f"👤 {full_name} | {username or '—'}\n"
             f"🆔 <code>{tg_id}</code>\n"
-            f"💰 {balance:,.0f} UZS | 📋 {tariff or '—'}\n"
+            f"💰 {balance:.4f} USDT | 📋 {tariff or '—'}\n"
             f"🤖 {'✅' if bot_active else '⏹'} | 🔑 <code>{api_show}</code>\n"
             f"🔐 <code>{sk_show}</code>"
         )
@@ -546,7 +546,7 @@ async def cb_confirm_pay(call: CallbackQuery):
     if tariff_type == "balance":
         update_balance(tg_id, amount)
         try:
-            await call.bot.send_message(tg_id, f"✅ <b>Balans to'ldirildi!</b>\n\n💰 +{amount:,.0f} UZS")
+            await call.bot.send_message(tg_id, f"✅ <b>Balans to'ldirildi!</b>\n\n💰 +{amount:.4f} USDT")
         except Exception:
             pass
     else:
