@@ -214,7 +214,7 @@ async def mining_settings(message: Message):
     for p in plans:
         text += (
             f"<b>{p['name']}</b>\n"
-            f"  Soatlik: {p['hourly_USDT']} USDT\n"
+            f"  Soatlik: {p['hourly_usdt']} USDT\n"
             f"  Kunlik: {p['daily_price']} → {p['daily_earn']} USDT\n"
             f"  Oylik: {p['monthly_price']} → {p['monthly_earn']} USDT\n\n"
         )
@@ -269,7 +269,7 @@ async def proc_mining_value(message: Message, state: FSMContext):
         await message.answer("Bekor qilindi.", reply_markup=admin_menu())
         return
     try:
-        value = int(message.text.replace(" ", "").replace(",", ""))
+        value = float(message.text.replace(" ", "").replace(",", ""))
         data = await state.get_data()
         field_map = {
             "hourly": "hourly_USDT", "dprice": "daily_price",
@@ -277,7 +277,7 @@ async def proc_mining_value(message: Message, state: FSMContext):
         }
         update_mining_plan(data["mining_plan_id"], **{field_map[data["mining_field"]]: value})
         await state.clear()
-        await message.answer(f"✅ Yangilandi: {value:,} USDT", reply_markup=admin_menu())
+        await message.answer(f"✅ Yangilandi: {value} USDT", reply_markup=admin_menu())
     except ValueError:
         await message.answer("❌ Raqam kiriting.")
 
@@ -296,7 +296,7 @@ async def bot_settings_menu(message: Message):
     await message.answer(
         f"🔧 <b>Bot sozlamalari</b>\n\n"
         f"🎁 Referral bonus: <b>{s.get('referral_bonus', '0.5')} USDT</b>\n"
-        f"👤 Signal nomi: <b>{s.get('signal_name', 'GTRobot Signal')}</b>\n"
+        f"👤 Signal nomi: <b>{s.get('signal_name', 'Ai Trading Bot Signal')}</b>\n"
         f"🆘 Qo'llab-quvvatlash:\n{s.get('support_text', '@grandtrade_admin')}",
         reply_markup=kb.as_markup()
     )
@@ -470,7 +470,7 @@ async def proc_broadcast(message: Message, state: FSMContext):
                 )
             else:
                 await message.bot.send_message(
-                    user[0], f"📢 <b>GTRobot:</b>\n\n{message.text}"
+                    user[0], f"📢 <b>Ai Trading Bot:</b>\n\n{message.text}"
                 )
             sent += 1
         except Exception:

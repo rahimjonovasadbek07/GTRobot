@@ -22,13 +22,12 @@ from utils.lang import t, get_lang_keyboard, LANGS
 from config import ADMIN_IDS, REQUIRED_CHANNELS
 
 router = Router()
-
 def get_referral_bonus():
     from database.db import get_bot_settings
     s = get_bot_settings()
     return int(s.get("referral_bonus", "5000"))
 
-REFERRAL_BONUS = 5000
+REFERRAL_BONUS = 5000  # default
 
 
 class TopupState(StatesGroup):
@@ -42,18 +41,20 @@ def get_user_lang(tg_id):
 
 
 async def check_subscribed(bot: Bot, user_id: int) -> bool:
-    """Barcha majburiy kanallarga obuna tekshirish"""
+    """Config va DB dan kanallarni tekshirish"""
     from database.db import get_channels
-
+    
+    # Config dan kanallar
     channels_to_check = list(REQUIRED_CHANNELS)
-
+    
+    # DB dan ham kanallar
     db_channels = get_channels()
     for ch in db_channels:
         channels_to_check.append({"id": ch[1], "name": ch[2]})
-
+    
     if not channels_to_check:
         return True
-
+    
     for ch in channels_to_check:
         ch_id = ch["id"] if isinstance(ch, dict) else ch[1]
         try:
@@ -126,22 +127,32 @@ async def cmd_start(message: Message, state: FSMContext):
         except Exception:
             pass
 
-    # ✅ MAJBURIY OBUNA TEKSHIRISH (har doim)
+    # Kanal tekshirish
     subscribed = await check_subscribed(message.bot, user.id)
     if not subscribed:
-        all_channels = get_all_channels_for_sub()
         lang = get_user_lang(user.id)
         await message.answer(
             t(lang, "subscribe_required"),
-            reply_markup=check_sub_keyboard(all_channels)
+            reply_markup=check_sub_keyboard(REQUIRED_CHANNELS)
         )
         return
 
-    # Yangi foydalanuvchi - til tanlat
+    # Til tanlash (yangi foydalanuvchi)
     if not existing:
         await message.answer(
             "🌐 Tilni tanlang / Выберите язык / Choose language:",
             reply_markup=get_lang_keyboard()
+        )
+        return
+
+    # Obunani har safar tekshirish
+    subscribed = await check_subscribed(message.bot, user.id)
+    if not subscribed:
+        db_u = get_user(user.id)
+        lang2 = db_u.get("lang", "uz") if db_u else "uz"
+        await message.answer(
+            t(lang2, "subscribe_required"),
+            reply_markup=sub_keyboard()
         )
         return
 
@@ -173,6 +184,7 @@ async def cb_check_sub(call: CallbackQuery):
     lang = get_user_lang(call.from_user.id)
     if subscribed:
         await call.message.delete()
+        # Yangi foydalanuvchi bo'lsa til tanlat
         user = get_user(call.from_user.id)
         if not user or not user.get("lang"):
             await call.message.answer(
@@ -185,13 +197,7 @@ async def cb_check_sub(call: CallbackQuery):
             reply_markup=main_menu(lang)
         )
     else:
-        all_channels = get_all_channels_for_sub()
         await call.answer(t(lang, "sub_not_done"), show_alert=True)
-        # Tugmalarni yangilash (yangi kanallar qo'shilgan bo'lsa)
-        try:
-            await call.message.edit_reply_markup(reply_markup=check_sub_keyboard(all_channels))
-        except Exception:
-            pass
 
 
 # ===== TARIF TEKSHIRISH DECORATOR =====
@@ -245,7 +251,7 @@ async def show_balance(message: Message):
 
 @router.callback_query(F.data == "topup_balance")
 async def cb_topup(call: CallbackQuery):
-    await call.message.edit_text("💳 Miqdorni tanlang (USDT):", reply_markup=topup_amount_keyboard())
+    await call.message.edit_text("💳 Miqdorni tanlang:", reply_markup=topup_amount_keyboard())
 
 
 @router.callback_query(F.data.regexp(r'^topup_\d+$'))
@@ -253,15 +259,16 @@ async def cb_topup_amount(call: CallbackQuery, state: FSMContext):
     amount = int(call.data.split("_")[1])
     await state.update_data(topup_amount=amount)
 
+    # To'lov rekvizitlarini olish
     s = get_payment_settings()
 
-    text = f"💳 <b>To'lov: {amount} USDT</b>\n\n"
+    text = f"💳 <b>To'lov: {amount:.2f} USDT</b>\n\n"
     if s["wallet_address"]:
         text += f"💎 <b>USDT ({s['network']}):</b>\n<code>{s['wallet_address']}</code>\n\n"
     if s["card_number"]:
         text += f"💳 <b>Karta:</b>\n<code>{s['card_number']}</code>\n👤 {s['card_owner']}\n\n"
     if not s["wallet_address"] and not s["card_number"]:
-        text += "⚠️ Admin rekvizitlarni hali kiritilmagan.\n\n"
+        text += "⚠️ Admin rekvizitlarni hali kiritilmagan. /admin → 💳 To'lov rekvizit\n\n"
 
     text += "📸 To'lovdan so'ng <b>chek rasmini</b> yuboring:"
     await call.message.edit_text(text)
@@ -278,35 +285,32 @@ async def cb_topup_custom(call: CallbackQuery, state: FSMContext):
 async def proc_custom_amount(message: Message, state: FSMContext):
     if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
-        lang = get_user_lang(message.from_user.id)
-        await message.answer("❌ Bekor qilindi.", reply_markup=main_menu(lang))
+        await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
     try:
-        amount = float(message.text.replace(" ", "").replace(",", "."))
+        amount = int(message.text.replace(" ", "").replace(",", ""))
         if amount < 1:
             await message.answer("❌ Minimal 1 USDT")
             return
         await state.update_data(topup_amount=amount)
         s = get_payment_settings()
-        text = f"💳 <b>{amount} USDT</b>\n\n"
+        text = f"💳 <b>{amount:.2f} USDT</b>\n\n"
         if s["wallet_address"]:
             text += f"💎 USDT ({s['network']}):\n<code>{s['wallet_address']}</code>\n\n"
         if s["card_number"]:
             text += f"💳 Karta: <code>{s['card_number']}</code>\n\n"
         text += "📸 Chek yuboring:"
-        lang = get_user_lang(message.from_user.id)
-        await message.answer(text, reply_markup=cancel_keyboard(lang))
+        await message.answer(text, reply_markup=cancel_keyboard())
         await state.set_state(TopupState.waiting_receipt)
     except ValueError:
-        await message.answer("❌ Raqam kiriting. Masalan: 10 yoki 25.5")
+        await message.answer("❌ Raqam kiriting.")
 
 
 @router.message(TopupState.waiting_receipt)
 async def proc_receipt(message: Message, state: FSMContext):
     if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
         await state.clear()
-        lang = get_user_lang(message.from_user.id)
-        await message.answer("❌ Bekor qilindi.", reply_markup=main_menu(lang))
+        await message.answer("❌ Bekor qilindi.", reply_markup=main_menu())
         return
     if not message.photo and not message.document:
         await message.answer("❌ Chek rasmini yuboring.")
@@ -323,7 +327,7 @@ async def proc_receipt(message: Message, state: FSMContext):
                 f"👤 {message.from_user.full_name}\n"
                 f"🆔 <code>{message.from_user.id}</code>\n"
                 f"📱 @{message.from_user.username or '—'}\n"
-                f"💰 <b>{amount} USDT</b>\n#{payment_id}"
+                f"💰 <b>{amount:.2f} USDT</b>\n#{payment_id}"
             )
             kb = payment_confirm_keyboard(payment_id, message.from_user.id, "balance")
             if message.photo:
@@ -348,14 +352,32 @@ async def show_tariff(message: Message):
     balance = user["balance"] if user else 0
     lang = get_user_lang(message.from_user.id)
 
-    await message.answer(
-        f"📋 <b>Tarif rejalari</b>\n\n"
-        f"💰 Balans: <b>{balance:.4f} USDT</b>\n\n"
-        f"📅 <b>Kunlik</b> — {daily:.2f} USDT (24 soat)\n"
-        f"📆 <b>Oylik</b> — {monthly:.2f} USDT (30 kun)\n\n"
-        f"💳 Avval balansni to'ldiring.",
-        reply_markup=tariff_keyboard(daily, monthly)
-    )
+    if lang == "ru":
+        text = (
+            f"📋 <b>Тарифные планы</b>\n\n"
+            f"💰 Баланс: <b>{balance:.4f} USDT</b>\n\n"
+            f"📅 <b>Дневной</b> — {daily:.2f} USDT (24 часа)\n"
+            f"📆 <b>Месячный</b> — {monthly:.2f} USDT (30 дней)\n\n"
+            f"💳 Сначала пополните баланс."
+        )
+    elif lang == "en":
+        text = (
+            f"📋 <b>Tariff Plans</b>\n\n"
+            f"💰 Balance: <b>{balance:.4f} USDT</b>\n\n"
+            f"📅 <b>Daily</b> — {daily:.2f} USDT (24 hours)\n"
+            f"📆 <b>Monthly</b> — {monthly:.2f} USDT (30 days)\n\n"
+            f"💳 Please top up your balance first."
+        )
+    else:
+        text = (
+            f"📋 <b>Tarif rejalari</b>\n\n"
+            f"💰 Balans: <b>{balance:.4f} USDT</b>\n\n"
+            f"📅 <b>Kunlik</b> — {daily:.2f} USDT (24 soat)\n"
+            f"📆 <b>Oylik</b> — {monthly:.2f} USDT (30 kun)\n\n"
+            f"💳 Avval balansni to'ldiring."
+        )
+
+    await message.answer(text, reply_markup=tariff_keyboard(daily, monthly))
 
 
 @router.callback_query(F.data.startswith("buy_"))
@@ -374,11 +396,19 @@ async def cb_buy_tariff(call: CallbackQuery):
     days = 1 if tariff_type == "daily" else 30
     expires = (datetime.now() + timedelta(days=days)).isoformat()
     set_tariff(call.from_user.id, tariff_type, expires)
-    label = "Kunlik (1 kun)" if tariff_type == "daily" else "Oylik (30 kun)"
     lang = get_user_lang(call.from_user.id)
-    await call.message.edit_text(
-        f"✅ <b>Tarif faollashtirildi!</b>\n\n📋 {label}\n💰 {price:.2f} USDT\n📅 {expires[:10]} gacha"
-    )
+
+    if lang == "ru":
+        label = "Дневной (1 день)" if tariff_type == "daily" else "Месячный (30 дней)"
+        success_text = f"✅ <b>Тариф активирован!</b>\n\n📋 {label}\n💰 {price:.2f} USDT\n📅 До {expires[:10]}"
+    elif lang == "en":
+        label = "Daily (1 day)" if tariff_type == "daily" else "Monthly (30 days)"
+        success_text = f"✅ <b>Tariff activated!</b>\n\n📋 {label}\n💰 {price:.2f} USDT\n📅 Until {expires[:10]}"
+    else:
+        label = "Kunlik (1 kun)" if tariff_type == "daily" else "Oylik (30 kun)"
+        success_text = f"✅ <b>Tarif faollashtirildi!</b>\n\n📋 {label}\n💰 {price:.2f} USDT\n📅 {expires[:10]} gacha"
+
+    await call.message.edit_text(success_text)
     await call.message.answer("✅ Barcha funksiyalardan foydalanishingiz mumkin!", reply_markup=main_menu(lang))
 
 

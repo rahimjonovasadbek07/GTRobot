@@ -114,7 +114,7 @@ async def main():
     dp.include_router(history_router)
     dp.include_router(user_router)
 
-    logger.info("🤖 GTRobot V3 ishga tushdi!")
+    logger.info("🤖 Ai Trading Bot V3 ishga tushdi!")
     asyncio.create_task(mining_payout_loop(bot))
     await dp.start_polling(bot, skip_updates=True)
 

@@ -17,4 +17,4 @@ TARIFF_PRICES = {
     "monthly": 50.0
 }
 
-DB_PATH = "gtrobot.db"
+DB_PATH = "ai_trading_bot.db"

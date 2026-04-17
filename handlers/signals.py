@@ -27,7 +27,7 @@ def format_signal_message(symbol: str, direction: str, leverage: int,
     if trader_name is None:
         from database.db import get_bot_settings
         s = get_bot_settings()
-        trader_name = s.get("signal_name", "GTRobot Signal")
+        trader_name = s.get("signal_name", "Ai Treding Bot Signal")
     """Klient formatida signal xabari"""
     dir_emoji = "🟢" if direction == "LONG" else "🔴"
 

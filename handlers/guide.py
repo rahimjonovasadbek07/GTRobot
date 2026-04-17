@@ -28,7 +28,7 @@ def back_kb():
     return kb.as_markup()
 
 
-@router.message(F.text == "📖 Qo'llanma")
+@router.message(F.text.in_(["📖 Qo'llanma", "📖 Руководство", "📖 Guide"]))
 async def show_guide(message: Message):
     await message.answer(
         "📖 <b>GTRobot Qo'llanma</b>\n\n"
@@ -78,7 +78,7 @@ async def guide_mexc_api(call: CallbackQuery):
         "❌ Transfer — BELGILAMANG!\n\n"
 
         "<b>5-qadam: Nom kiriting</b>\n"
-        "• Notes ga: GTRobot yozing\n"
+        "• Notes ga: Ai Treding Bot yozing\n"
         "• Link IP Address — bo'sh qoldiring\n"
         "• Create bosing\n\n"
 
@@ -265,7 +265,7 @@ async def guide_balance(call: CallbackQuery):
         "💰 <b>Balans & Tarif — Qo'llanma</b>\n\n"
 
         "<b>Balans nima?</b>\n"
-        "Bu GTRobot ichidagi hisobingiz. "
+        "Bu Ai Treding Bot ichidagi hisobingiz. "
         "Tarif sotib olish uchun ishlatiladi.\n\n"
 
         "<b>Balansni to'ldirish:</b>\n"
@@ -324,7 +324,7 @@ async def guide_referral(call: CallbackQuery):
         "• Barchasini 👥 Referral bo'limida ko'ring\n\n"
 
         "<b>Havola formati:</b>\n"
-        "<code>t.me/gtrobot?start=ref_SIZNINGKODINGIZ</code>"
+        "<code>t.me/Ai Treding Bot?start=ref_SIZNINGKODINGIZ</code>"
     )
     await call.message.edit_text(text, reply_markup=back_kb())
 
@@ -379,6 +379,6 @@ async def guide_faq(call: CallbackQuery):
 @router.callback_query(F.data == "guide_back")
 async def guide_back(call: CallbackQuery):
     await call.message.edit_text(
-        "📖 <b>GTRobot Qo'llanma</b>\n\nBo'limni tanlang:",
+        "📖 <b>Ai Treding Bot Qo'llanma</b>\n\nBo'limni tanlang:",
         reply_markup=guide_main_kb()
     )

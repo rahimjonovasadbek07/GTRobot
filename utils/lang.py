@@ -4,7 +4,7 @@ Ko'p tilli tizim - O'zbek, Rus, Ingliz
 
 LANGS = {
     "uz": {
-        "start_welcome": "👋 Salom, <b>{name}</b>!\n\n🤖 <b>GTRobot</b> — MEXC birjasida professional savdo roboti\n\n💰 Balans: <b>{balance:.4f} USDT</b>\n📋 Tarif: <b>{tariff}</b>\n\n📌 Bo'limni tanlang:",
+        "start_welcome": "👋 Salom, <b>{name}</b>!\n\n🤖 <b>Ai Treding Bot</b> — MEXC birjasida professional savdo roboti\n\n💰 Balans: <b>{balance:.4f} USDT</b>\n📋 Tarif: <b>{tariff}</b>\n\n📌 Bo'limni tanlang:",
         "choose_lang": "🌐 Tilni tanlang:",
         "lang_set": "✅ Til o'zgartirildi!",
         "subscribe_required": "🔔 <b>Botdan foydalanish uchun kanalga obuna bo'ling:</b>",
@@ -32,7 +32,7 @@ LANGS = {
         "change_lang": "🌐 Tilni o'zgartirish",
     },
     "ru": {
-        "start_welcome": "👋 Привет, <b>{name}</b>!\n\n🤖 <b>GTRobot</b> — профессиональный торговый робот на MEXC\n\n💰 Баланс: <b>{balance:.4f} USDT</b>\n📋 Тариф: <b>{tariff}</b>\n\n📌 Выберите раздел:",
+        "start_welcome": "👋 Привет, <b>{name}</b>!\n\n🤖 <b>Ai Treding Bot</b> — профессиональный торговый робот на MEXC\n\n💰 Баланс: <b>{balance:.4f} USDT</b>\n📋 Тариф: <b>{tariff}</b>\n\n📌 Выберите раздел:",
         "choose_lang": "🌐 Выберите язык:",
         "lang_set": "✅ Язык изменён!",
         "subscribe_required": "🔔 <b>Для использования бота подпишитесь на канал:</b>",
@@ -60,7 +60,7 @@ LANGS = {
         "change_lang": "🌐 Изменить язык",
     },
     "en": {
-        "start_welcome": "👋 Hello, <b>{name}</b>!\n\n🤖 <b>GTRobot</b> — Professional trading robot on MEXC\n\n💰 Balance: <b>{balance:.4f} USDT</b>\n📋 Tariff: <b>{tariff}</b>\n\n📌 Choose a section:",
+        "start_welcome": "👋 Hello, <b>{name}</b>!\n\n🤖 <b>Ai Treding Bot</b> — Professional trading robot on MEXC\n\n💰 Balance: <b>{balance:.4f} USDT</b>\n📋 Tariff: <b>{tariff}</b>\n\n📌 Choose a section:",
         "choose_lang": "🌐 Choose language:",
         "lang_set": "✅ Language changed!",
         "subscribe_required": "🔔 <b>Please subscribe to the channel to use the bot:</b>",
