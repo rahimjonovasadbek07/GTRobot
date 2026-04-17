@@ -314,7 +314,7 @@ async def guide_referral(call: CallbackQuery):
         "5. Balansingizga bonus tushadi 🎁\n\n"
 
         "<b>Bonus miqdori:</b>\n"
-        "• Har bir do'st uchun: 5,000 UZS\n"
+        "• Har bir do'st uchun: 5,000 USDT\n"
         "• Cheksiz miqdorda do'st taklif qilish mumkin\n"
         "• Bonus darhol balansingizga tushadi\n\n"
 
