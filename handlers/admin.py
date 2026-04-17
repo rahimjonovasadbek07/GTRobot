@@ -92,7 +92,7 @@ async def proc_tariff_type(message: Message, state: FSMContext):
         await message.answer("❌ <b>daily</b> yoki <b>monthly</b> yozing:")
         return
     await state.update_data(tariff_type=t)
-    await message.answer("💰 Yangi narx (UZS):", reply_markup=cancel_keyboard())
+    await message.answer("💰 Yangi narx (USDT):", reply_markup=cancel_keyboard())
     await state.set_state(AdminState.waiting_tariff_price)
 
 
@@ -251,11 +251,11 @@ async def cb_mining_field(call: CallbackQuery, state: FSMContext):
     field = parts[1]
     plan_id = int(parts[2])
     field_names = {
-        "hourly": "soatlik daromad (UZS)",
-        "dprice": "kunlik narx (UZS)",
-        "dearn": "kunlik daromad (UZS)",
-        "mprice": "oylik narx (UZS)",
-        "mearn": "oylik daromad (UZS)",
+        "hourly": "soatlik daromad (USDT)",
+        "dprice": "kunlik narx (USDT)",
+        "dearn": "kunlik daromad (USDT)",
+        "mprice": "oylik narx (USDT)",
+        "mearn": "oylik daromad (USDT)",
     }
     await state.update_data(mining_field=field, mining_plan_id=plan_id)
     await call.message.edit_text(f"💰 Yangi {field_names.get(field, field)} kiriting:")
@@ -277,7 +277,7 @@ async def proc_mining_value(message: Message, state: FSMContext):
         }
         update_mining_plan(data["mining_plan_id"], **{field_map[data["mining_field"]]: value})
         await state.clear()
-        await message.answer(f"✅ Yangilandi: {value:,} UZS", reply_markup=admin_menu())
+        await message.answer(f"✅ Yangilandi: {value:,} USDT", reply_markup=admin_menu())
     except ValueError:
         await message.answer("❌ Raqam kiriting.")
 
@@ -306,7 +306,7 @@ async def bot_settings_menu(message: Message):
 async def cb_set_referral(call: CallbackQuery, state: FSMContext):
     s = get_bot_settings()
     await call.message.edit_text(
-        f"🎁 Referral bonus miqdorini kiriting (UZS):\n\nJoriy: {s.get('referral_bonus', '5000')} UZS"
+        f"🎁 Referral bonus miqdorini kiriting (USDT):\n\nJoriy: {s.get('referral_bonus', '0.5')} USDT"
     )
     await state.set_state(AdminState.waiting_referral_bonus)
 

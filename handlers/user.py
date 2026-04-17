@@ -262,7 +262,7 @@ async def cb_topup_amount(call: CallbackQuery, state: FSMContext):
     # To'lov rekvizitlarini olish
     s = get_payment_settings()
 
-    text = f"💳 <b>To'lov: {amount:,} UZS</b>\n\n"
+    text = f"💳 <b>To'lov: {amount:.2f} USDT</b>\n\n"
     if s["wallet_address"]:
         text += f"💎 <b>USDT ({s['network']}):</b>\n<code>{s['wallet_address']}</code>\n\n"
     if s["card_number"]:
@@ -277,7 +277,7 @@ async def cb_topup_amount(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "topup_custom")
 async def cb_topup_custom(call: CallbackQuery, state: FSMContext):
-    await call.message.edit_text("✏️ Miqdorni kiriting (UZS):")
+    await call.message.edit_text("✏️ Miqdorni kiriting (USDT):")
     await state.set_state(TopupState.waiting_amount)
 
 
@@ -289,12 +289,12 @@ async def proc_custom_amount(message: Message, state: FSMContext):
         return
     try:
         amount = int(message.text.replace(" ", "").replace(",", ""))
-        if amount < 5000:
-            await message.answer("❌ Minimal 5,000 UZS")
+        if amount < 1:
+            await message.answer("❌ Minimal 1 USDT")
             return
         await state.update_data(topup_amount=amount)
         s = get_payment_settings()
-        text = f"💳 <b>{amount:,} UZS</b>\n\n"
+        text = f"💳 <b>{amount:.2f} USDT</b>\n\n"
         if s["wallet_address"]:
             text += f"💎 USDT ({s['network']}):\n<code>{s['wallet_address']}</code>\n\n"
         if s["card_number"]:
@@ -327,7 +327,7 @@ async def proc_receipt(message: Message, state: FSMContext):
                 f"👤 {message.from_user.full_name}\n"
                 f"🆔 <code>{message.from_user.id}</code>\n"
                 f"📱 @{message.from_user.username or '—'}\n"
-                f"💰 <b>{amount:,} UZS</b>\n#{payment_id}"
+                f"💰 <b>{amount:.2f} USDT</b>\n#{payment_id}"
             )
             kb = payment_confirm_keyboard(payment_id, message.from_user.id, "balance")
             if message.photo:
@@ -346,8 +346,8 @@ async def proc_receipt(message: Message, state: FSMContext):
 @router.message(F.text.in_(["📋 Tarif", "📋 Тариф", "📋 Tariff"]))
 async def show_tariff(message: Message):
     prices = get_tariff_prices()
-    daily = prices.get("daily", 10000)
-    monthly = prices.get("monthly", 200000)
+    daily = prices.get("daily", 1.0)
+    monthly = prices.get("monthly", 50.0)
     user = get_user(message.from_user.id)
     balance = user["balance"] if user else 0
     lang = get_user_lang(message.from_user.id)
@@ -355,8 +355,8 @@ async def show_tariff(message: Message):
     await message.answer(
         f"📋 <b>Tarif rejalari</b>\n\n"
         f"💰 Balans: <b>{balance:.4f} USDT</b>\n\n"
-        f"📅 <b>Kunlik</b> — {int(daily):,} UZS (24 soat)\n"
-        f"📆 <b>Oylik</b> — {int(monthly):,} UZS (30 kun)\n\n"
+        f"📅 <b>Kunlik</b> — {daily:.2f} USDT (24 soat)\n"
+        f"📆 <b>Oylik</b> — {monthly:.2f} USDT (30 kun)\n\n"
         f"💳 Avval balansni to'ldiring.",
         reply_markup=tariff_keyboard(daily, monthly)
     )
@@ -371,7 +371,7 @@ async def cb_buy_tariff(call: CallbackQuery):
     balance = user["balance"] if user else 0
 
     if balance < price:
-        await call.answer(f"❌ Balans yetarli emas!\nKerak: {price:,} UZS\nBalans: {balance:,} UZS", show_alert=True)
+        await call.answer(f"❌ Balans yetarli emas!\nKerak: {price:.2f} USDT\nBalans: {balance:.4f} USDT", show_alert=True)
         return
 
     update_balance(call.from_user.id, -price)
@@ -381,7 +381,7 @@ async def cb_buy_tariff(call: CallbackQuery):
     label = "Kunlik (1 kun)" if tariff_type == "daily" else "Oylik (30 kun)"
     lang = get_user_lang(call.from_user.id)
     await call.message.edit_text(
-        f"✅ <b>Tarif faollashtirildi!</b>\n\n📋 {label}\n💰 {price:,} UZS\n📅 {expires[:10]} gacha"
+        f"✅ <b>Tarif faollashtirildi!</b>\n\n📋 {label}\n💰 {price:.2f} USDT\n📅 {expires[:10]} gacha"
     )
     await call.message.answer("✅ Barcha funksiyalardan foydalanishingiz mumkin!", reply_markup=main_menu(lang))
 
