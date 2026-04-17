@@ -41,8 +41,9 @@ def balance_keyboard() -> InlineKeyboardMarkup:
 
 def topup_amount_keyboard() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    for a in [10000, 20000, 50000, 100000, 200000, 500000]:
-        kb.add(InlineKeyboardButton(text=f"{a:,} UZS", callback_data=f"topup_{a}"))
+    # UZS o'rniga USDT
+    for a in [1, 5, 10, 20, 50, 100]:
+        kb.add(InlineKeyboardButton(text=f"{a} USDT", callback_data=f"topup_{a}"))
     kb.add(InlineKeyboardButton(text="✏️ Boshqa miqdor", callback_data="topup_custom"))
     kb.adjust(2)
     return kb.as_markup()
