@@ -41,7 +41,6 @@ def balance_keyboard() -> InlineKeyboardMarkup:
 
 def topup_amount_keyboard() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    # UZS o'rniga USDT
     for a in [1, 5, 10, 20, 50, 100]:
         kb.add(InlineKeyboardButton(text=f"{a} USDT", callback_data=f"topup_{a}"))
     kb.add(InlineKeyboardButton(text="✏️ Boshqa miqdor", callback_data="topup_custom"))
@@ -72,10 +71,13 @@ def check_sub_keyboard(channels) -> InlineKeyboardMarkup:
     for ch in channels:
         ch_id = ch["id"] if isinstance(ch, dict) else ch[1]
         ch_name = ch["name"] if isinstance(ch, dict) else ch[2]
-        if ch_id.startswith("-100"):
-            link = f"https://t.me/c/{ch_id[4:]}"
-        else:
-            link = f"https://t.me/{ch_id.lstrip('@')}"
+        # invite link yoki username link
+        link = ch.get("link") if isinstance(ch, dict) else None
+        if not link:
+            if ch_id.startswith("-100"):
+                link = f"https://t.me/c/{ch_id[4:]}"
+            else:
+                link = f"https://t.me/{ch_id.lstrip('@')}"
         kb.add(InlineKeyboardButton(text=f"📢 {ch_name}", url=link))
     kb.add(InlineKeyboardButton(text="✅ Obunani tekshirish", callback_data="check_sub"))
     kb.adjust(1)
@@ -101,5 +103,6 @@ def cancel_keyboard(lang="uz") -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
     kb.add(KeyboardButton(text=t(lang, "cancel")))
     return kb.as_markup(resize_keyboard=True, one_time_keyboard=True)
+
 
 CANCEL_TEXTS = ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]
