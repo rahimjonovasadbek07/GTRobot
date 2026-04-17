@@ -5,8 +5,8 @@ ADMIN_IDS = [int(x) for x in os.getenv("ADMIN_IDS", "837837025").split(",")]
 
 # Majburiy kanallar
 REQUIRED_CHANNELS = [
-    {"id": "-1002519689075", "name": "Grand Trade 1"},
-    {"id": "-1003685255437", "name": "Grand Trade 2"},
+    {"id": "-1001908526934", "name": "Grand Trade 1"},
+    {"id": "-1002519689075", "name": "Grand Trade 2"},
 ]
 
 MEXC_API_BASE = "https://api.mexc.com"
