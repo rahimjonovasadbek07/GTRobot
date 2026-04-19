@@ -19,6 +19,44 @@ from keyboards.kb import main_menu
 router = Router()
 
 
+# Mining planlar USDT da
+MINING_PLANS = [
+    {
+        "id": 1,
+        "name": "⛏️ Miner v1",
+        "hourly_usdt": 0.0005,
+        "daily_price": 1.0,
+        "weekly_price": 6.0,
+        "monthly_price": 20.0,
+        "daily_earn": 0.012,
+        "weekly_earn": 0.084,
+        "monthly_earn": 0.36,
+    },
+    {
+        "id": 2,
+        "name": "⛏️ Miner v2",
+        "hourly_usdt": 0.002,
+        "daily_price": 3.0,
+        "weekly_price": 18.0,
+        "monthly_price": 60.0,
+        "daily_earn": 0.048,
+        "weekly_earn": 0.336,
+        "monthly_earn": 1.44,
+    },
+    {
+        "id": 3,
+        "name": "⛏️ Miner v3",
+        "hourly_usdt": 0.008,
+        "daily_price": 10.0,
+        "weekly_price": 60.0,
+        "monthly_price": 200.0,
+        "daily_earn": 0.192,
+        "weekly_earn": 1.344,
+        "monthly_earn": 5.76,
+    },
+]
+
+
 def get_mining_lang(tg_id):
     user = get_user(tg_id)
     return user.get("lang", "uz") if user else "uz"
@@ -77,40 +115,6 @@ def duration_kb(plan_id: int, lang="uz"):
         kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_plans"))
     kb.adjust(1)
     return kb.as_markup()
-    {
-        "id": 1,
-        "name": "⛏️ Miner v1",
-        "hourly_usdt": 0.0005,      # Soatlik USDT
-        "daily_price": 1.0,          # Kunlik narx USDT
-        "weekly_price": 6.0,
-        "monthly_price": 20.0,
-        "daily_earn": 0.012,         # Kunlik daromad USDT
-        "weekly_earn": 0.084,
-        "monthly_earn": 0.36,
-    },
-    {
-        "id": 2,
-        "name": "⛏️ Miner v2",
-        "hourly_usdt": 0.002,
-        "daily_price": 3.0,
-        "weekly_price": 18.0,
-        "monthly_price": 60.0,
-        "daily_earn": 0.048,
-        "weekly_earn": 0.336,
-        "monthly_earn": 1.44,
-    },
-    {
-        "id": 3,
-        "name": "⛏️ Miner v3",
-        "hourly_usdt": 0.008,
-        "daily_price": 10.0,
-        "weekly_price": 60.0,
-        "monthly_price": 200.0,
-        "daily_earn": 0.192,
-        "weekly_earn": 1.344,
-        "monthly_earn": 5.76,
-    },
-]
 
 
 
