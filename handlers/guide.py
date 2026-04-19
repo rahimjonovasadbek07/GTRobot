@@ -132,7 +132,11 @@ async def show_guide(message: Message):
 async def _send_guide_section(call: CallbackQuery, section: str):
     lang = get_user_lang(call.from_user.id)
     content = GUIDE_CONTENT.get(section, {}).get(lang) or GUIDE_CONTENT.get(section, {}).get("uz", "—")
-    await call.message.edit_text(content, reply_markup=back_kb(lang))
+    await call.answer()
+    try:
+        await call.message.edit_text(content, reply_markup=back_kb(lang), parse_mode="HTML")
+    except Exception:
+        await call.message.answer(content, reply_markup=back_kb(lang), parse_mode="HTML")
 
 
 @router.callback_query(F.data == "guide_mexc_api")
