@@ -21,6 +21,7 @@ def admin_menu() -> ReplyKeyboardMarkup:
     kb.row(KeyboardButton(text="⛏️ Mining sozlama"), KeyboardButton(text="🔧 Bot sozlama"))
     kb.row(KeyboardButton(text="📊 Statistika"), KeyboardButton(text="✅ To'lov tasdiqlash"))
     kb.row(KeyboardButton(text="👥 Foydalanuvchilar"), KeyboardButton(text="📨 Xabar yuborish"))
+    kb.row(KeyboardButton(text="🎁 Tarif berish"), KeyboardButton(text="💰 Balans berish"))
     kb.row(KeyboardButton(text="🔙 Asosiy menyu"))
     return kb.as_markup(resize_keyboard=True)
 

@@ -1,10 +1,10 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import InlineKeyboardButton
 from datetime import datetime, timedelta
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,6 +43,11 @@ class AdminState(StatesGroup):
     waiting_referral_bonus = State()
     waiting_support_text = State()
     waiting_signal_name = State()
+    # Tarif berish
+    waiting_give_tariff_id = State()
+    waiting_give_tariff_type = State()
+    waiting_give_balance_id = State()
+    waiting_give_balance_amount = State()
 
 
 # ===== ADMIN MENYU =====
@@ -417,11 +422,6 @@ async def proc_channel_name(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.callback_query(F.data.startswith("ch_info_"))
-async def cb_ch_info(call: CallbackQuery):
-    await call.answer()  # Faqat tugmani bosish effektini o'chiradi
-
-
 @router.callback_query(F.data.startswith("del_channel_"))
 async def cb_del_channel(call: CallbackQuery):
     if not is_admin(call.from_user.id):
@@ -465,26 +465,14 @@ async def proc_broadcast(message: Message, state: FSMContext):
     failed = 0
     for user in users:
         try:
-            # Rasm, video yoki matn
             if message.photo:
-                await message.bot.send_photo(
-                    user[0], message.photo[-1].file_id,
-                    caption=message.caption or ""
-                )
+                await message.bot.send_photo(user[0], message.photo[-1].file_id, caption=message.caption or "")
             elif message.video:
-                await message.bot.send_video(
-                    user[0], message.video.file_id,
-                    caption=message.caption or ""
-                )
+                await message.bot.send_video(user[0], message.video.file_id, caption=message.caption or "")
             elif message.document:
-                await message.bot.send_document(
-                    user[0], message.document.file_id,
-                    caption=message.caption or ""
-                )
+                await message.bot.send_document(user[0], message.document.file_id, caption=message.caption or "")
             else:
-                await message.bot.send_message(
-                    user[0], f"📢 <b>Ai Trading Bot:</b>\n\n{message.text}"
-                )
+                await message.bot.send_message(user[0], f"📢 <b>Ai Trading Bot:</b>\n\n{message.text}")
             sent += 1
         except Exception:
             failed += 1
@@ -521,15 +509,12 @@ async def show_users(message: Message):
     lines = [f"👥 <b>Foydalanuvchilar ({len(users)} ta)</b>\n"]
     for u in users[:20]:
         tg_id, username, full_name, balance, tariff, tariff_exp, api_key, secret_key, bot_active = u[:9]
-        api_show = f"{api_key[:6]}...{api_key[-4:]}" if api_key else "—"
-        sk_show = f"{secret_key[:4]}...{secret_key[-4:]}" if secret_key else "—"
         lines.append(
-            f"━━━━━━━━━━━━━━━\n"
+            f"━━━━━━━━━━━━━\n"
             f"👤 {full_name} | {username or '—'}\n"
             f"🆔 <code>{tg_id}</code>\n"
             f"💰 {balance:.4f} USDT | 📋 {tariff or '—'}\n"
-            f"🤖 {'✅' if bot_active else '⏹'} | 🔑 <code>{api_show}</code>\n"
-            f"🔐 <code>{sk_show}</code>"
+            f"🤖 {'✅' if bot_active else '⏹'} | 🔑 {'✅' if api_key else '❌'}"
         )
     if len(users) > 20:
         lines.append(f"\n... va yana {len(users)-20} ta")
@@ -595,3 +580,149 @@ async def cb_reject_pay(call: CallbackQuery):
         await call.message.edit_caption(caption=new_caption)
     except Exception:
         await call.answer("❌ Rad etildi!")
+
+
+# ===== 10. FOYDALANUVCHIGA TARIF BERISH =====
+@router.message(F.text == "🎁 Tarif berish")
+async def give_tariff_start(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    await state.clear()
+    await message.answer(
+        "🎁 <b>Foydalanuvchiga tarif berish</b>\n\n"
+        "Foydalanuvchi Telegram ID sini kiriting:\n\n"
+        "<i>Misol: 27377346</i>",
+        reply_markup=cancel_keyboard()
+    )
+    await state.set_state(AdminState.waiting_give_tariff_id)
+
+
+@router.message(AdminState.waiting_give_tariff_id)
+async def give_tariff_get_id(message: Message, state: FSMContext):
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    try:
+        tg_id = int(message.text.strip())
+        user = get_user(tg_id)
+        if not user:
+            await message.answer("❌ Foydalanuvchi topilmadi! ID ni tekshiring.")
+            return
+        await state.update_data(give_tg_id=tg_id)
+        kb = InlineKeyboardBuilder()
+        kb.add(InlineKeyboardButton(text="📅 Kunlik (24 soat)", callback_data="give_daily"))
+        kb.add(InlineKeyboardButton(text="📆 Oylik (30 kun)", callback_data="give_monthly"))
+        kb.adjust(1)
+        await message.answer(
+            f"👤 <b>{user['full_name']}</b> ({user['username'] or '—'})\n"
+            f"🆔 <code>{tg_id}</code>\n"
+            f"📋 Joriy tarif: {user.get('tariff') or 'Yo\'q'}\n\n"
+            f"Qaysi tarifni bermoqchisiz?",
+            reply_markup=kb.as_markup()
+        )
+        await state.set_state(AdminState.waiting_give_tariff_type)
+    except ValueError:
+        await message.answer("❌ Faqat raqam kiriting!")
+
+
+@router.callback_query(F.data.in_({"give_daily", "give_monthly"}))
+async def give_tariff_confirm(call: CallbackQuery, state: FSMContext):
+    if not is_admin(call.from_user.id):
+        return
+    data = await state.get_data()
+    tg_id = data.get("give_tg_id")
+    tariff_type = "daily" if call.data == "give_daily" else "monthly"
+    days = 1 if tariff_type == "daily" else 30
+    expires = (datetime.now() + timedelta(days=days)).isoformat()
+    set_tariff(tg_id, tariff_type, expires)
+    label = "Kunlik (24 soat)" if tariff_type == "daily" else "Oylik (30 kun)"
+    # Foydalanuvchiga xabar
+    try:
+        await call.bot.send_message(
+            tg_id,
+            f"🎁 <b>Sizga tarif berildi!</b>\n\n"
+            f"📋 {label}\n"
+            f"📅 {expires[:10]} gacha\n\n"
+            f"✅ Barcha funksiyalardan foydalanishingiz mumkin!"
+        )
+    except Exception:
+        pass
+    await call.message.edit_text(
+        f"✅ <b>Tarif berildi!</b>\n\n"
+        f"🆔 <code>{tg_id}</code>\n"
+        f"📋 {label}\n"
+        f"📅 {expires[:10]} gacha"
+    )
+    await state.clear()
+    await call.message.answer("✅ Bajarildi!", reply_markup=admin_menu())
+
+
+# ===== 11. FOYDALANUVCHIGA BALANS BERISH =====
+@router.message(F.text == "💰 Balans berish")
+async def give_balance_start(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return
+    await state.clear()
+    await message.answer(
+        "💰 <b>Foydalanuvchiga balans berish</b>\n\n"
+        "Foydalanuvchi Telegram ID sini kiriting:\n\n"
+        "<i>Misol: 27377346</i>",
+        reply_markup=cancel_keyboard()
+    )
+    await state.set_state(AdminState.waiting_give_balance_id)
+
+
+@router.message(AdminState.waiting_give_balance_id)
+async def give_balance_get_id(message: Message, state: FSMContext):
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    try:
+        tg_id = int(message.text.strip())
+        user = get_user(tg_id)
+        if not user:
+            await message.answer("❌ Foydalanuvchi topilmadi!")
+            return
+        await state.update_data(give_balance_tg_id=tg_id)
+        await message.answer(
+            f"👤 <b>{user['full_name']}</b>\n"
+            f"💰 Joriy balans: {user['balance']:.4f} USDT\n\n"
+            f"Qancha USDT bermoqchisiz?",
+            reply_markup=cancel_keyboard()
+        )
+        await state.set_state(AdminState.waiting_give_balance_amount)
+    except ValueError:
+        await message.answer("❌ Faqat raqam kiriting!")
+
+
+@router.message(AdminState.waiting_give_balance_amount)
+async def give_balance_confirm(message: Message, state: FSMContext):
+    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=admin_menu())
+        return
+    try:
+        amount = float(message.text.replace(",", ".").strip())
+        data = await state.get_data()
+        tg_id = data.get("give_balance_tg_id")
+        update_balance(tg_id, amount)
+        try:
+            await message.bot.send_message(
+                tg_id,
+                f"💰 <b>Balansingiz to'ldirildi!</b>\n\n"
+                f"+{amount:.4f} USDT\n\n"
+                f"✅ Admin tomonidan qo'shildi."
+            )
+        except Exception:
+            pass
+        await message.answer(
+            f"✅ <b>Bajarildi!</b>\n\n"
+            f"🆔 <code>{tg_id}</code>\n"
+            f"💰 +{amount:.4f} USDT",
+            reply_markup=admin_menu()
+        )
+        await state.clear()
+    except ValueError:
+        await message.answer("❌ Raqam kiriting!")

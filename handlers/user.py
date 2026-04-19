@@ -440,6 +440,17 @@ async def cb_buy_tariff(call: CallbackQuery):
     await call.message.answer("✅ Barcha funksiyalardan foydalanishingiz mumkin!", reply_markup=main_menu(lang))
 
 
+
+# ===== ID =====
+@router.message(F.text == "/id")
+async def show_my_id(message: Message):
+    await message.answer(
+        f"🆔 <b>Sizning Telegram ID:</b>\n\n"
+        f"<code>{message.from_user.id}</code>\n\n"
+        f"<i>Bu raqamni adminga yuboring.</i>"
+    )
+
+
 # ===== SUPPORT =====
 @router.message(F.text.in_(["🆘 Qo'llab-quvvatlash", "🆘 Поддержка", "🆘 Support"]))
 async def show_support(message: Message):
