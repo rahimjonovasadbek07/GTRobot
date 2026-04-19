@@ -21,18 +21,32 @@ copy_tasks = {}
 _cached_traders = []
 
 
-def copy_main_kb(is_running=False):
+def copy_main_kb(is_running=False, lang="uz"):
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text="👑 Top 100 Treyderlar", callback_data="ct_top_traders"))
-    kb.add(InlineKeyboardButton(text="📋 Treyderlar Pozitsiyasi", callback_data="ct_positions"))
-    kb.add(InlineKeyboardButton(text="🔥 Top 20 Volume", callback_data="ct_top_volume"))
-    kb.add(InlineKeyboardButton(text="📈 Top Gainers", callback_data="ct_gainers"))
-    kb.add(InlineKeyboardButton(text="📉 Top Losers", callback_data="ct_losers"))
-    kb.add(InlineKeyboardButton(text="🔍 Juftlik tahlili", callback_data="ct_analyze"))
-    if is_running:
-        kb.add(InlineKeyboardButton(text="⏹ Copy Tradingni to'xtatish", callback_data="ct_stop"))
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text="👑 Топ 100 Трейдеров", callback_data="ct_top_traders"))
+        kb.add(InlineKeyboardButton(text="📋 Позиции трейдеров", callback_data="ct_positions"))
+        kb.add(InlineKeyboardButton(text="🔥 Топ 20 по объёму", callback_data="ct_top_volume"))
+        kb.add(InlineKeyboardButton(text="📈 Top Gainers", callback_data="ct_gainers"))
+        kb.add(InlineKeyboardButton(text="📉 Top Losers", callback_data="ct_losers"))
+        kb.add(InlineKeyboardButton(text="🔍 Анализ пары", callback_data="ct_analyze"))
+        kb.add(InlineKeyboardButton(text="⏹ Остановить" if is_running else "▶️ Авто Copy Trading", callback_data="ct_stop" if is_running else "ct_auto_start"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text="👑 Top 100 Traders", callback_data="ct_top_traders"))
+        kb.add(InlineKeyboardButton(text="📋 Trader Positions", callback_data="ct_positions"))
+        kb.add(InlineKeyboardButton(text="🔥 Top 20 Volume", callback_data="ct_top_volume"))
+        kb.add(InlineKeyboardButton(text="📈 Top Gainers", callback_data="ct_gainers"))
+        kb.add(InlineKeyboardButton(text="📉 Top Losers", callback_data="ct_losers"))
+        kb.add(InlineKeyboardButton(text="🔍 Pair analysis", callback_data="ct_analyze"))
+        kb.add(InlineKeyboardButton(text="⏹ Stop" if is_running else "▶️ Auto Copy Trading", callback_data="ct_stop" if is_running else "ct_auto_start"))
     else:
-        kb.add(InlineKeyboardButton(text="▶️ Avtomatik Copy Trading", callback_data="ct_auto_start"))
+        kb.add(InlineKeyboardButton(text="👑 Top 100 Treyderlar", callback_data="ct_top_traders"))
+        kb.add(InlineKeyboardButton(text="📋 Treyderlar Pozitsiyasi", callback_data="ct_positions"))
+        kb.add(InlineKeyboardButton(text="🔥 Top 20 Volume", callback_data="ct_top_volume"))
+        kb.add(InlineKeyboardButton(text="📈 Top Gainers", callback_data="ct_gainers"))
+        kb.add(InlineKeyboardButton(text="📉 Top Losers", callback_data="ct_losers"))
+        kb.add(InlineKeyboardButton(text="🔍 Juftlik tahlili", callback_data="ct_analyze"))
+        kb.add(InlineKeyboardButton(text="⏹ Copy Tradingni to\'xtatish" if is_running else "▶️ Avtomatik Copy Trading", callback_data="ct_stop" if is_running else "ct_auto_start"))
     kb.adjust(1)
     return kb.as_markup()
 
@@ -42,7 +56,7 @@ class CopyState(StatesGroup):
     waiting_symbol = State()
 
 
-@router.message(F.text == "📊 Copy Trading")
+@router.message(F.text.in_(["📊 Copy Trading", "📊 Копи Трейдинг"]))
 async def show_copy_trading(message: Message):
     from database.db import has_active_tariff
     from utils.lang import t

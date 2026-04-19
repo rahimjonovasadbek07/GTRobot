@@ -417,6 +417,11 @@ async def proc_channel_name(message: Message, state: FSMContext):
     await state.clear()
 
 
+@router.callback_query(F.data.startswith("ch_info_"))
+async def cb_ch_info(call: CallbackQuery):
+    await call.answer()  # Faqat tugmani bosish effektini o'chiradi
+
+
 @router.callback_query(F.data.startswith("del_channel_"))
 async def cb_del_channel(call: CallbackQuery):
     if not is_admin(call.from_user.id):
