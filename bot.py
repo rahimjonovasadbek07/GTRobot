@@ -31,7 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 class SubscriptionMiddleware(BaseMiddleware):
-    SKIP_CALLBACKS = {"check_sub", "lang_uz", "lang_ru", "lang_en"}
+    SKIP_CALLBACKS = {
+        "check_sub", "lang_uz", "lang_ru", "lang_en",
+        "guide_mexc_api", "guide_auto_trading", "guide_copy_trading",
+        "guide_arbitrage", "guide_signals", "guide_balance",
+        "guide_referral", "guide_faq", "guide_back",
+    }
 
     async def __call__(
         self,
