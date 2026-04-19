@@ -16,73 +16,70 @@ from config import ADMIN_IDS
 
 router = Router()
 
+SIG_TX = {
+    "uz": {
+        "no_signals": "📡 <b>Faol signallar yo'q</b>\n\nAdmin signal yuborganda bu yerda ko'rinadi.",
+        "signals_title": "📡 <b>Faol signallar ({n} ta)</b>",
+        "entry": "📥 Kirish", "tp": "🎯 TP", "sl": "🛑 SL",
+    },
+    "ru": {
+        "no_signals": "📡 <b>Нет активных сигналов</b>\n\nКогда админ пришлёт сигнал, он появится здесь.",
+        "signals_title": "📡 <b>Активные сигналы ({n} шт.)</b>",
+        "entry": "📥 Вход", "tp": "🎯 TP", "sl": "🛑 SL",
+    },
+    "en": {
+        "no_signals": "📡 <b>No active signals</b>\n\nSignals from admin will appear here.",
+        "signals_title": "📡 <b>Active signals ({n})</b>",
+        "entry": "📥 Entry", "tp": "🎯 TP", "sl": "🛑 SL",
+    },
+}
 
-class SignalState(StatesGroup):
-    waiting_signal = State()
+
+def get_user_lang(tg_id):
+    user = get_user(tg_id)
+    return user.get("lang", "uz") if user else "uz"
 
 
-def format_signal_message(symbol: str, direction: str, leverage: int,
-                           entry: float, tp: float, sl: float,
-                           trader_name: str = None) -> str:
+def format_signal_message(symbol, direction, leverage, entry, tp, sl, trader_name=None):
     if trader_name is None:
         from database.db import get_bot_settings
         s = get_bot_settings()
-        trader_name = s.get("signal_name", "Ai Treding Bot Signal")
-    """Klient formatida signal xabari"""
+        trader_name = s.get("signal_name", "GTRobot Signal")
     dir_emoji = "🟢" if direction == "LONG" else "🔴"
-
-    # Juftlikni formatlash: BTCUSDT → BTC/USDT
-    if symbol.endswith("USDT"):
-        base = symbol[:-4]
-        formatted = f"{base}/USDT"
-    else:
-        formatted = symbol
-
+    formatted = f"{symbol[:-4]}/USDT" if symbol.endswith("USDT") else symbol
     msg = (
         f"📡 <b>Signal!</b>\n\n"
         f"👤 <b>Treder: {trader_name}</b>\n\n"
         f"{dir_emoji} <b>{formatted}</b>\n"
         f"{'LONG' if direction == 'LONG' else 'SHORT'}: {entry}\n"
-        f"TP: {tp}\n"
-        f"SL: {sl}\n"
+        f"TP: {tp}\nSL: {sl}\n"
     )
-
     if leverage > 1:
         msg += f"⚡️ Leverage: x{leverage}\n"
-
     return msg
 
 
-# ===== SIGNALLAR RO'YXATI =====
-@router.message(F.text == "📡 Signallar")
+@router.message(F.text.in_(["📡 Signallar", "📡 Сигналы", "📡 Signals"]))
 async def show_signals(message: Message):
+    lang = get_user_lang(message.from_user.id)
+    tx = SIG_TX.get(lang, SIG_TX["uz"])
     signals = get_active_signals()
     if not signals:
-        await message.answer(
-            "📡 <b>Faol signallar yo'q</b>\n\n"
-            "Admin signal yuborganda bu yerda ko'rinadi."
-        )
+        await message.answer(tx["no_signals"])
         return
-
-    text = f"📡 <b>Faol signallar ({len(signals)} ta)</b>\n\n"
+    text = f"{tx['signals_title'].format(n=len(signals))}\n\n"
     for s in signals:
         sid, admin_id, symbol, direction, leverage, entry, tp, sl, status, msg, created = s
         dir_emoji = "🟢" if direction == "LONG" else "🔴"
-
-        if symbol.endswith("USDT"):
-            formatted = f"{symbol[:-4]}/USDT"
-        else:
-            formatted = symbol
-
+        formatted = f"{symbol[:-4]}/USDT" if symbol.endswith("USDT") else symbol
         text += (
             f"{dir_emoji} <b>{formatted}</b> {direction}\n"
-            f"📥 Kirish: {entry} | 🎯 TP: {tp} | 🛑 SL: {sl}\n"
+            f"{tx['entry']}: {entry} | {tx['tp']}: {tp} | {tx['sl']}: {sl}\n"
             f"🕐 {created[:16]}\n\n"
         )
     await message.answer(text)
 
 
-# ===== ADMIN: SIGNAL YUBORISH =====
 @router.message(F.text == "📡 Signal yuborish")
 async def admin_send_signal(message: Message, state: FSMContext):
     if message.from_user.id not in ADMIN_IDS:
@@ -97,56 +94,40 @@ async def admin_send_signal(message: Message, state: FSMContext):
         "• <b>10</b> — leverage\n"
         "• <b>50000</b> — kirish narxi\n"
         "• <b>52000</b> — TP\n"
-        "• <b>49000</b> — SL\n\n"
-        "Misol:\n"
-        "<code>BTCUSDT LONG 10 50000 52000 49000</code>\n"
-        "<code>ETHUSDT SHORT 5 3000 2800 3100</code>",
+        "• <b>49000</b> — SL",
         reply_markup=cancel_keyboard()
     )
+    from aiogram.fsm.state import State, StatesGroup
     await state.set_state(SignalState.waiting_signal)
+
+
+class SignalState(StatesGroup):
+    waiting_signal = State()
 
 
 @router.message(SignalState.waiting_signal)
 async def process_signal(message: Message, state: FSMContext):
-    if message.text in ["❌ Bekor qilish", "❌ Отмена", "❌ Cancel"]:
+    from keyboards.kb import CANCEL_TEXTS
+    if message.text in CANCEL_TEXTS:
         await state.clear()
         await message.answer("❌ Bekor qilindi.", reply_markup=admin_menu())
         return
-
     try:
         parts = message.text.strip().upper().split()
         if len(parts) != 6:
             raise ValueError("Format noto'g'ri")
-        symbol = parts[0]
-        direction = parts[1]
-        leverage = int(parts[2])
-        entry = float(parts[3])
-        tp = float(parts[4])
-        sl = float(parts[5])
+        symbol, direction = parts[0], parts[1]
+        leverage, entry, tp, sl = int(parts[2]), float(parts[3]), float(parts[4]), float(parts[5])
         if direction not in ["LONG", "SHORT"]:
-            raise ValueError("LONG yoki SHORT bo'lishi kerak")
+            raise ValueError
     except Exception:
-        await message.answer(
-            "❌ <b>Noto'g'ri format!</b>\n\n"
-            "To'g'ri format:\n"
-            "<code>BTCUSDT LONG 10 50000 52000 49000</code>"
-        )
+        await message.answer("❌ <b>Noto'g'ri format!</b>\n\nTo'g'ri: <code>BTCUSDT LONG 10 50000 52000 49000</code>")
         return
 
-    # Signalni saqlash
-    signal_id = save_signal(
-        message.from_user.id, symbol, direction, leverage,
-        entry, tp, sl, message.text
-    )
-
-    # Klient formatida signal xabari
+    signal_id = save_signal(message.from_user.id, symbol, direction, leverage, entry, tp, sl, message.text)
     signal_msg = format_signal_message(symbol, direction, leverage, entry, tp, sl)
-
-    # Barcha foydalanuvchilarga yuborish
     all_users = get_all_users()
     sent = 0
-    traded = 0
-
     for u in all_users:
         try:
             await message.bot.send_message(u[0], signal_msg)
@@ -154,10 +135,9 @@ async def process_signal(message: Message, state: FSMContext):
         except Exception:
             pass
 
-    # Bot faol foydalanuvchilar uchun avtomatik trade
+    traded = 0
     from database.db import get_users_with_active_bot
     active_users = get_users_with_active_bot()
-
     for user in active_users:
         tg_id, api_key, secret_key = user
         if not api_key:
@@ -175,9 +155,7 @@ async def process_signal(message: Message, state: FSMContext):
                     try:
                         await message.bot.send_message(
                             tg_id,
-                            f"✅ <b>Trade ochildi!</b>\n\n"
-                            f"{'🟢' if side == 'BUY' else '🔴'} {symbol} {side}\n"
-                            f"📋 Order: {result['order'].get('orderId', '?')}"
+                            f"✅ <b>Trade ochildi!</b>\n\n{'🟢' if side == 'BUY' else '🔴'} {symbol} {side}\n📋 Order: {result['order'].get('orderId', '?')}"
                         )
                     except Exception:
                         pass
@@ -185,18 +163,13 @@ async def process_signal(message: Message, state: FSMContext):
             pass
 
     await state.clear()
-    from keyboards.kb import admin_menu
     await message.answer(
-        f"✅ <b>Signal yuborildi!</b>\n\n"
-        f"📨 Xabar: {sent} ta\n"
-        f"🤖 Avtomatik trade: {traded} ta\n"
-        f"🆔 Signal: #{signal_id}",
+        f"✅ <b>Signal yuborildi!</b>\n\n📨 Xabar: {sent} ta\n🤖 Avtomatik trade: {traded} ta\n🆔 Signal: #{signal_id}",
         reply_markup=signal_keyboard(signal_id)
     )
     await message.answer("Admin menyu:", reply_markup=admin_menu())
 
 
-# ===== SIGNALNI YOPISH =====
 @router.callback_query(F.data.startswith("close_signal_"))
 async def cb_close_signal(call: CallbackQuery):
     if call.from_user.id not in ADMIN_IDS:
@@ -204,17 +177,12 @@ async def cb_close_signal(call: CallbackQuery):
         return
     signal_id = int(call.data.split("_")[-1])
     close_signal(signal_id)
-
     all_users = get_all_users()
     for u in all_users:
         try:
-            await call.bot.send_message(
-                u[0],
-                f"🔒 <b>Signal #{signal_id} yopildi!</b>"
-            )
+            await call.bot.send_message(u[0], f"🔒 <b>Signal #{signal_id} yopildi!</b>")
         except Exception:
             pass
-
     await call.message.edit_reply_markup(reply_markup=None)
     await call.answer("✅ Signal yopildi!")
     await call.message.answer(f"✅ Signal #{signal_id} yopildi.", reply_markup=admin_menu())

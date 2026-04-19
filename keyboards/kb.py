@@ -25,17 +25,29 @@ def admin_menu() -> ReplyKeyboardMarkup:
     return kb.as_markup(resize_keyboard=True)
 
 
-def tariff_keyboard(daily_price, monthly_price) -> InlineKeyboardMarkup:
+def tariff_keyboard(daily_price, monthly_price, lang="uz") -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text=f"📅 Kunlik — {daily_price:.2f} USDT", callback_data="buy_daily"))
-    kb.add(InlineKeyboardButton(text=f"📆 Oylik — {monthly_price:.2f} USDT", callback_data="buy_monthly"))
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text=f"📅 Дневной — {daily_price:.2f} USDT", callback_data="buy_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Месячный — {monthly_price:.2f} USDT", callback_data="buy_monthly"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text=f"📅 Daily — {daily_price:.2f} USDT", callback_data="buy_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Monthly — {monthly_price:.2f} USDT", callback_data="buy_monthly"))
+    else:
+        kb.add(InlineKeyboardButton(text=f"📅 Kunlik — {daily_price:.2f} USDT", callback_data="buy_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Oylik — {monthly_price:.2f} USDT", callback_data="buy_monthly"))
     kb.adjust(1)
     return kb.as_markup()
 
 
-def balance_keyboard() -> InlineKeyboardMarkup:
+def balance_keyboard(lang="uz") -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text="💳 Balansni to'ldirish", callback_data="topup_balance"))
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text="💳 Пополнить баланс", callback_data="topup_balance"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text="💳 Top up balance", callback_data="topup_balance"))
+    else:
+        kb.add(InlineKeyboardButton(text="💳 Balansni to'ldirish", callback_data="topup_balance"))
     return kb.as_markup()
 
 
@@ -71,7 +83,6 @@ def check_sub_keyboard(channels) -> InlineKeyboardMarkup:
     for ch in channels:
         ch_id = ch["id"] if isinstance(ch, dict) else ch[1]
         ch_name = ch["name"] if isinstance(ch, dict) else ch[2]
-        # invite link yoki username link
         link = ch.get("link") if isinstance(ch, dict) else None
         if not link:
             if ch_id.startswith("-100"):
