@@ -30,10 +30,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-# ===== MAJBURIY OBUNA MIDDLEWARE =====
 class SubscriptionMiddleware(BaseMiddleware):
-    """Har bir xabarda obunani tekshiradi"""
-
     SKIP_CALLBACKS = {"check_sub", "lang_uz", "lang_ru", "lang_en"}
 
     async def __call__(
@@ -88,48 +85,33 @@ class SubscriptionMiddleware(BaseMiddleware):
 
 
 async def restore_active_traders(bot: Bot):
-    """Railway restart bo'lganda bot_active=1 userlarni qayta yoqish"""
     try:
         from database.db import get_all_active_traders
         active_users = get_all_active_traders()
         if not active_users:
-            logger.info("⚙️ Faol traderlar yo'q.")
             return
-
         logger.info(f"🔄 {len(active_users)} ta faol trader qayta tiklanmoqda...")
         for user in active_users:
             user_id = user["tg_id"]
             api_key = user.get("mexc_api_key")
             secret_key = user.get("mexc_secret_key")
-
             if not api_key or not secret_key:
                 continue
-
-            # Default sozlamalar bilan qayta yoqish
             trade_amount = float(user.get("trade_amount", 10))
             min_profit = float(user.get("min_profit", 0.3))
-
             task = asyncio.create_task(
-                auto_trading_loop(
-                    bot, user_id,
-                    api_key, secret_key,
-                    trade_amount, min_profit
-                )
+                auto_trading_loop(bot, user_id, api_key, secret_key, trade_amount, min_profit)
             )
             auto_tasks[user_id] = task
-            logger.info(f"✅ User {user_id} trading loop qayta yoqildi.")
-
             try:
                 await bot.send_message(
                     user_id,
-                    "🔄 <b>Bot qayta ishga tushdi!</b>\n\n"
+                    f"🔄 <b>Bot qayta ishga tushdi!</b>\n\n"
                     f"✅ Trading avtomatik davom etmoqda\n"
-                    f"💰 Har trade: <b>{trade_amount} USDT</b>\n"
-                    f"📊 Min profit: <b>{min_profit}%</b>"
+                    f"💰 Har trade: <b>{trade_amount} USDT</b>"
                 )
             except Exception:
                 pass
-
     except Exception as e:
         logger.error(f"restore_active_traders xatosi: {e}")
 
@@ -144,22 +126,21 @@ async def main():
     dp.message.middleware(SubscriptionMiddleware())
     dp.callback_query.middleware(SubscriptionMiddleware())
 
+    # MUHIM: guide_router COPY TRADING DAN OLDIN bo'lishi kerak!
     dp.include_router(cancel_router)
     dp.include_router(admin_router)
     dp.include_router(signals_router)
     dp.include_router(arbitrage_router)
-    dp.include_router(guide_router)
+    dp.include_router(guide_router)      # ← guide avval
     dp.include_router(settings_router)
     dp.include_router(mining_router)
-    dp.include_router(copy_trading_router)
+    dp.include_router(copy_trading_router)  # ← copy trading keyin
     dp.include_router(trading_router)
     dp.include_router(referral_router)
     dp.include_router(history_router)
     dp.include_router(user_router)
 
     logger.info("🤖 GTRobot ishga tushdi!")
-
-    # Background tasklar
     asyncio.create_task(mining_payout_loop(bot))
     asyncio.create_task(restore_active_traders(bot))
 
