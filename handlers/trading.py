@@ -30,42 +30,89 @@ class AutoState(StatesGroup):
     waiting_min_profit = State()
 
 
-def trading_main_kb(is_running=False):
+def get_trading_lang(tg_id):
+    from database.db import get_user
+    user = get_user(tg_id)
+    return user.get("lang", "uz") if user else "uz"
+
+
+def trading_main_kb(is_running=False, lang="uz"):
     kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text="🔑 MEXC API ulash", callback_data="set_api"))
-    if is_running:
-        kb.add(InlineKeyboardButton(text="⏹ Botni to'xtatish", callback_data="stop_bot"))
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text="🔑 Подключить MEXC API", callback_data="set_api"))
+        kb.add(InlineKeyboardButton(text="⏹ Остановить бота" if is_running else "▶️ Активировать бота", callback_data="stop_bot" if is_running else "activate_bot"))
+        kb.add(InlineKeyboardButton(text="🔍 Проверить сигналы", callback_data="check_signals"))
+        kb.add(InlineKeyboardButton(text="🔺 Найти арбитраж", callback_data="auto_find_arb"))
+        kb.add(InlineKeyboardButton(text="💰 Баланс MEXC", callback_data="check_balance"))
+        kb.add(InlineKeyboardButton(text="📋 Открытые ордера", callback_data="open_orders"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text="🔑 Connect MEXC API", callback_data="set_api"))
+        kb.add(InlineKeyboardButton(text="⏹ Stop bot" if is_running else "▶️ Activate bot", callback_data="stop_bot" if is_running else "activate_bot"))
+        kb.add(InlineKeyboardButton(text="🔍 Check signals", callback_data="check_signals"))
+        kb.add(InlineKeyboardButton(text="🔺 Find arbitrage", callback_data="auto_find_arb"))
+        kb.add(InlineKeyboardButton(text="💰 MEXC Balance", callback_data="check_balance"))
+        kb.add(InlineKeyboardButton(text="📋 Open orders", callback_data="open_orders"))
     else:
-        kb.add(InlineKeyboardButton(text="▶️ Botni faollashtirish", callback_data="activate_bot"))
-    kb.add(InlineKeyboardButton(text="🔍 Signallarni tekshirish", callback_data="check_signals"))
-    kb.add(InlineKeyboardButton(text="🔺 Arbitraj izlash", callback_data="auto_find_arb"))
-    kb.add(InlineKeyboardButton(text="💰 MEXC Balans", callback_data="check_balance"))
-    kb.add(InlineKeyboardButton(text="📋 Ochiq buyurtmalar", callback_data="open_orders"))
+        kb.add(InlineKeyboardButton(text="🔑 MEXC API ulash", callback_data="set_api"))
+        kb.add(InlineKeyboardButton(text="⏹ Botni to'xtatish" if is_running else "▶️ Botni faollashtirish", callback_data="stop_bot" if is_running else "activate_bot"))
+        kb.add(InlineKeyboardButton(text="🔍 Signallarni tekshirish", callback_data="check_signals"))
+        kb.add(InlineKeyboardButton(text="🔺 Arbitraj izlash", callback_data="auto_find_arb"))
+        kb.add(InlineKeyboardButton(text="💰 MEXC Balans", callback_data="check_balance"))
+        kb.add(InlineKeyboardButton(text="📋 Ochiq buyurtmalar", callback_data="open_orders"))
     kb.adjust(1)
     return kb.as_markup()
 
 
-@router.message(F.text == "🤖 Auto Trading")
+@router.message(F.text.in_(["🤖 Auto Trading", "🤖 Авто Трейдинг", "🤖 Auto Trading"]))
 async def show_auto_trading(message: Message):
     user = get_user(message.from_user.id)
     if not user:
         await message.answer("❌ Avval /start bosing.")
         return
+    lang = get_trading_lang(message.from_user.id)
     user_id = message.from_user.id
     is_running = user_id in auto_tasks and not auto_tasks[user_id].done()
-    api_status = "✅ Ulangan" if user.get("mexc_api_key") else "❌ Ulanmagan"
-    bot_status = "✅ Faol" if is_running else "⏹ To'xtatilgan"
-    await message.answer(
-        f"🤖 <b>Auto Trading (MEXC)</b>\n\n"
-        f"🔑 API: {api_status}\n"
-        f"⚙️ Bot: {bot_status}\n\n"
-        f"<b>Bot nima qiladi:</b>\n"
-        f"📡 RSI+MACD asosida signal topadi\n"
-        f"🔺 Uchburchak arbitraj izlaydi\n"
-        f"⚡️ Avtomatik BUY/SELL ochadi\n"
-        f"🎯 TP va SL o'rnatadi",
-        reply_markup=trading_main_kb(is_running)
-    )
+
+    if lang == "ru":
+        api_status = "✅ Подключён" if user.get("mexc_api_key") else "❌ Не подключён"
+        bot_status = "✅ Активен" if is_running else "⏹ Остановлен"
+        text = (
+            f"🤖 <b>Авто Трейдинг (MEXC)</b>\n\n"
+            f"🔑 API: {api_status}\n"
+            f"⚙️ Бот: {bot_status}\n\n"
+            f"<b>Что делает бот:</b>\n"
+            f"📡 Ищет сигналы RSI+MACD\n"
+            f"🔺 Ищет треугольный арбитраж\n"
+            f"⚡️ Автоматически открывает BUY/SELL\n"
+            f"🎯 Устанавливает TP и SL"
+        )
+    elif lang == "en":
+        api_status = "✅ Connected" if user.get("mexc_api_key") else "❌ Not connected"
+        bot_status = "✅ Active" if is_running else "⏹ Stopped"
+        text = (
+            f"🤖 <b>Auto Trading (MEXC)</b>\n\n"
+            f"🔑 API: {api_status}\n"
+            f"⚙️ Bot: {bot_status}\n\n"
+            f"<b>What the bot does:</b>\n"
+            f"📡 Finds RSI+MACD signals\n"
+            f"🔺 Finds triangular arbitrage\n"
+            f"⚡️ Auto opens BUY/SELL\n"
+            f"🎯 Sets TP and SL"
+        )
+    else:
+        api_status = "✅ Ulangan" if user.get("mexc_api_key") else "❌ Ulanmagan"
+        bot_status = "✅ Faol" if is_running else "⏹ To'xtatilgan"
+        text = (
+            f"🤖 <b>Auto Trading (MEXC)</b>\n\n"
+            f"🔑 API: {api_status}\n"
+            f"⚙️ Bot: {bot_status}\n\n"
+            f"<b>Bot nima qiladi:</b>\n"
+            f"📡 RSI+MACD asosida signal topadi\n"
+            f"🔺 Uchburchak arbitraj izlaydi\n"
+            f"⚡️ Avtomatik BUY/SELL ochadi\n"
+            f"🎯 TP va SL o'rnatadi"
+        )
+    await message.answer(text, reply_markup=trading_main_kb(is_running, lang))
 
 
 # ===== SIGNALLARNI TEKSHIRISH =====

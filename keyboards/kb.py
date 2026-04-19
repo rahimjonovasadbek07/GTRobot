@@ -72,7 +72,7 @@ def payment_confirm_keyboard(payment_id, tg_id, tariff) -> InlineKeyboardMarkup:
 def channels_keyboard(channels) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     for ch in channels:
-        kb.add(InlineKeyboardButton(text=f"❌ {ch[2]} ({ch[1]})", callback_data=f"del_channel_{ch[0]}"))
+        kb.add(InlineKeyboardButton(text=f"🗑 {ch[2]}", callback_data=f"del_channel_{ch[0]}"))
     kb.add(InlineKeyboardButton(text="➕ Kanal qo'shish", callback_data="add_channel"))
     kb.adjust(1)
     return kb.as_markup()

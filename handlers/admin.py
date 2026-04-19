@@ -369,12 +369,13 @@ async def manage_channels(message: Message, state: FSMContext):
         return
     await state.clear()
     channels = get_channels()
-    text = "📢 <b>Kanallar boshqaruvi</b>\n\n"
     if channels:
-        for ch in channels:
-            text += f"• {ch[2]} ({ch[1]})\n"
+        text = "📢 <b>Kanallar boshqaruvi</b>\n\n"
+        for i, ch in enumerate(channels, 1):
+            text += f"{i}. <b>{ch[2]}</b> — <code>{ch[1]}</code>\n"
+        text += "\n🗑 O'chirish uchun kanal tugmasini bosing:"
     else:
-        text += "Hozircha kanallar yo'q.\n"
+        text = "📢 <b>Kanallar boshqaruvi</b>\n\nHozircha kanallar yo'q."
     await message.answer(text, reply_markup=channels_keyboard(channels))
 
 
@@ -424,7 +425,14 @@ async def cb_del_channel(call: CallbackQuery):
     remove_channel(ch_id)
     await call.answer("✅ O'chirildi!")
     channels = get_channels()
-    await call.message.edit_text("📢 <b>Kanallar:</b>", reply_markup=channels_keyboard(channels))
+    if channels:
+        text = "📢 <b>Kanallar boshqaruvi</b>\n\n"
+        for i, ch in enumerate(channels, 1):
+            text += f"{i}. <b>{ch[2]}</b> — <code>{ch[1]}</code>\n"
+        text += "\n🗑 O'chirish uchun kanal tugmasini bosing:"
+    else:
+        text = "📢 <b>Kanallar boshqaruvi</b>\n\nHozircha kanallar yo'q."
+    await call.message.edit_text(text, reply_markup=channels_keyboard(channels))
 
 
 # ===== 6. BROADCAST =====

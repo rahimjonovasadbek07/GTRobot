@@ -18,8 +18,65 @@ from keyboards.kb import main_menu
 
 router = Router()
 
-# Mining planlar USDT da
-MINING_PLANS = [
+
+def get_mining_lang(tg_id):
+    user = get_user(tg_id)
+    return user.get("lang", "uz") if user else "uz"
+
+
+def mining_main_kb(lang="uz"):
+    kb = InlineKeyboardBuilder()
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text="⛏️ Выбрать тариф", callback_data="mining_plans"))
+        kb.add(InlineKeyboardButton(text="📊 Статистика майнинга", callback_data="mining_stats"))
+        kb.add(InlineKeyboardButton(text="⏹ Остановить майнинг", callback_data="mining_stop"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text="⛏️ Select plan", callback_data="mining_plans"))
+        kb.add(InlineKeyboardButton(text="📊 Mining statistics", callback_data="mining_stats"))
+        kb.add(InlineKeyboardButton(text="⏹ Stop mining", callback_data="mining_stop"))
+    else:
+        kb.add(InlineKeyboardButton(text="⛏️ Tarif tanlash", callback_data="mining_plans"))
+        kb.add(InlineKeyboardButton(text="📊 Mining statistika", callback_data="mining_stats"))
+        kb.add(InlineKeyboardButton(text="⏹ Miningni to'xtatish", callback_data="mining_stop"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def plans_kb(lang="uz"):
+    kb = InlineKeyboardBuilder()
+    for p in MINING_PLANS:
+        kb.add(InlineKeyboardButton(
+            text=f"{p['name']} — {p['hourly_usdt']} USDT/h",
+            callback_data=f"plan_{p['id']}"
+        ))
+    back_text = "🔙 Назад" if lang == "ru" else ("🔙 Back" if lang == "en" else "🔙 Orqaga")
+    kb.add(InlineKeyboardButton(text=back_text, callback_data="mining_back"))
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+def duration_kb(plan_id: int, lang="uz"):
+    plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
+    if not plan:
+        return InlineKeyboardBuilder().as_markup()
+    kb = InlineKeyboardBuilder()
+    if lang == "ru":
+        kb.add(InlineKeyboardButton(text=f"📅 Дневной — {plan['daily_price']} USDT", callback_data=f"buy_mining_{plan_id}_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Недельный — {plan['weekly_price']} USDT", callback_data=f"buy_mining_{plan_id}_weekly"))
+        kb.add(InlineKeyboardButton(text=f"🗓 Месячный — {plan['monthly_price']} USDT", callback_data=f"buy_mining_{plan_id}_monthly"))
+        kb.add(InlineKeyboardButton(text="🔙 Назад", callback_data="mining_plans"))
+    elif lang == "en":
+        kb.add(InlineKeyboardButton(text=f"📅 Daily — {plan['daily_price']} USDT", callback_data=f"buy_mining_{plan_id}_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Weekly — {plan['weekly_price']} USDT", callback_data=f"buy_mining_{plan_id}_weekly"))
+        kb.add(InlineKeyboardButton(text=f"🗓 Monthly — {plan['monthly_price']} USDT", callback_data=f"buy_mining_{plan_id}_monthly"))
+        kb.add(InlineKeyboardButton(text="🔙 Back", callback_data="mining_plans"))
+    else:
+        kb.add(InlineKeyboardButton(text=f"📅 Kunlik — {plan['daily_price']} USDT", callback_data=f"buy_mining_{plan_id}_daily"))
+        kb.add(InlineKeyboardButton(text=f"📆 Haftalik — {plan['weekly_price']} USDT", callback_data=f"buy_mining_{plan_id}_weekly"))
+        kb.add(InlineKeyboardButton(text=f"🗓 Oylik — {plan['monthly_price']} USDT", callback_data=f"buy_mining_{plan_id}_monthly"))
+        kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_plans"))
+    kb.adjust(1)
+    return kb.as_markup()
     {
         "id": 1,
         "name": "⛏️ Miner v1",
@@ -56,52 +113,11 @@ MINING_PLANS = [
 ]
 
 
-def mining_main_kb():
-    kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(text="⛏️ Tarif tanlash", callback_data="mining_plans"))
-    kb.add(InlineKeyboardButton(text="📊 Mining statistika", callback_data="mining_stats"))
-    kb.add(InlineKeyboardButton(text="⏹ Miningni to'xtatish", callback_data="mining_stop"))
-    kb.adjust(1)
-    return kb.as_markup()
-
-
-def plans_kb():
-    kb = InlineKeyboardBuilder()
-    for p in MINING_PLANS:
-        kb.add(InlineKeyboardButton(
-            text=f"{p['name']} — {p['hourly_uzs']} USDT/soat",
-            callback_data=f"plan_{p['id']}"
-        ))
-    kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_back"))
-    kb.adjust(1)
-    return kb.as_markup()
-
-
-def duration_kb(plan_id: int):
-    plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
-    if not plan:
-        return InlineKeyboardBuilder().as_markup()
-    kb = InlineKeyboardBuilder()
-    kb.add(InlineKeyboardButton(
-        text=f"📅 Kunlik — {plan['daily_price']} USDT",
-        callback_data=f"buy_mining_{plan_id}_daily"
-    ))
-    kb.add(InlineKeyboardButton(
-        text=f"📆 Haftalik — {plan['weekly_price']} USDT",
-        callback_data=f"buy_mining_{plan_id}_weekly"
-    ))
-    kb.add(InlineKeyboardButton(
-        text=f"🗓 Oylik — {plan['monthly_price']} USDT",
-        callback_data=f"buy_mining_{plan_id}_monthly"
-    ))
-    kb.add(InlineKeyboardButton(text="🔙 Orqaga", callback_data="mining_plans"))
-    kb.adjust(1)
-    return kb.as_markup()
-
 
 @router.message(F.text.in_(["⛏️ Cloud Mining", "⛏️ Cloud Mining"]))
 async def show_mining(message: Message):
     user = get_user(message.from_user.id)
+    lang = get_mining_lang(message.from_user.id)
     mining = get_user_mining(message.from_user.id)
 
     if mining:
@@ -122,7 +138,7 @@ async def show_mining(message: Message):
             f"⏰ Qolgan: <b>{hours_left} soat {minutes_left} daqiqa</b>\n"
             f"💵 Jami daromad: <b>{stats['total_earned']:.6f} USDT</b>\n\n"
             f"💰 Balans: <b>{user['balance']:.4f} USDT</b>",
-            reply_markup=mining_main_kb()
+            reply_markup=mining_main_kb(lang)
         )
     else:
         await message.answer(
@@ -134,12 +150,13 @@ async def show_mining(message: Message):
             f"3️⃣ Bot har soatda daromad hisoblaydi\n"
             f"4️⃣ Daromad balansingizga tushadi\n\n"
             f"💰 Balans: <b>{user['balance']:.4f} USDT</b>",
-            reply_markup=mining_main_kb()
+            reply_markup=mining_main_kb(lang)
         )
 
 
 @router.callback_query(F.data == "mining_plans")
 async def cb_mining_plans(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     text = "⛏️ <b>Cloud Mining Tariflar</b>\n\n"
     for p in MINING_PLANS:
         profit_d = round(p["daily_earn"] - p["daily_price"], 4)
@@ -150,11 +167,12 @@ async def cb_mining_plans(call: CallbackQuery):
             f"💳 Kunlik narx: {p['daily_price']} USDT\n"
             f"📊 Sof foyda/kun: +{profit_d} USDT\n\n"
         )
-    await call.message.edit_text(text, reply_markup=plans_kb())
+    await call.message.edit_text(text, reply_markup=plans_kb(lang))
 
 
 @router.callback_query(F.data.startswith("plan_"))
 async def cb_plan_select(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     plan_id = int(call.data.split("_")[1])
     plan = next((p for p in MINING_PLANS if p["id"] == plan_id), None)
     if not plan:
@@ -178,12 +196,13 @@ async def cb_plan_select(call: CallbackQuery):
         f"   Foyda: +{round(plan['monthly_earn'] - plan['monthly_price'], 4)} USDT\n\n"
         f"💰 Balans: <b>{balance:.4f} USDT</b>\n\n"
         f"Muddatni tanlang:",
-        reply_markup=duration_kb(plan_id)
+        reply_markup=duration_kb(plan_id, lang)
     )
 
 
 @router.callback_query(F.data.startswith("buy_mining_"))
 async def cb_buy_mining(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     parts = call.data.split("_")
     plan_id = int(parts[2])
     duration = parts[3]
@@ -235,11 +254,12 @@ async def cb_buy_mining(call: CallbackQuery):
         f"• Sof foyda: +{round(earn - price, 4)} USDT\n\n"
         f"💵 Daromad har soatda balansingizga tushadi! ✅"
     )
-    await call.message.answer("✅ Mining faol!", reply_markup=main_menu())
+    await call.message.answer("✅ Mining faol!", reply_markup=main_menu(lang))
 
 
 @router.callback_query(F.data == "mining_stats")
 async def cb_mining_stats(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     stats = get_mining_stats(call.from_user.id)
     user = get_user(call.from_user.id)
 
@@ -264,27 +284,29 @@ async def cb_mining_stats(call: CallbackQuery):
         f"💰 Soatlik: <b>{hourly} USDT</b>\n"
         f"💵 Jami daromad: <b>{stats['total_earned']:.6f} USDT</b>\n\n"
         f"💳 Balans: <b>{user['balance']:.4f} USDT</b>",
-        reply_markup=mining_main_kb()
+        reply_markup=mining_main_kb(lang)
     )
 
 
 @router.callback_query(F.data == "mining_stop")
 async def cb_mining_stop(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     mining = get_user_mining(call.from_user.id)
     if not mining:
         await call.answer("❌ Faol mining yo'q!", show_alert=True)
         return
     stop_mining(call.from_user.id)
     await call.message.edit_text("⏹ <b>Mining to'xtatildi!</b>")
-    await call.message.answer("Asosiy menyu:", reply_markup=main_menu())
+    await call.message.answer("Asosiy menyu:", reply_markup=main_menu(lang))
 
 
 @router.callback_query(F.data == "mining_back")
 async def cb_mining_back(call: CallbackQuery):
+    lang = get_mining_lang(call.from_user.id)
     user = get_user(call.from_user.id)
     await call.message.edit_text(
         f"⛏️ <b>Cloud Mining</b>\n\n💰 Balans: <b>{user['balance']:.4f} USDT</b>",
-        reply_markup=mining_main_kb()
+        reply_markup=mining_main_kb(lang)
     )
 
 
