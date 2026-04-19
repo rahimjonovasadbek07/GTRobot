@@ -8,7 +8,7 @@ import asyncio
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from database.db import get_user, save_api_keys, set_bot_active
+from database.db import get_user, save_api_keys, set_bot_active, save_trade_settings
 from keyboards.kb import main_menu, cancel_keyboard
 from utils.mexc_api import test_api_connection, get_spot_balance, get_open_orders, place_spot_order
 from utils.auto_strategy import (
@@ -252,6 +252,7 @@ async def process_min_profit(message: Message, state: FSMContext):
         )
         auto_tasks[user_id] = task
         set_bot_active(user_id, 1)
+        save_trade_settings(user_id, amount, min_profit)
         await state.clear()
         await message.answer(
             f"✅ <b>Avtomatik Trading yoqildi!</b>\n\n"

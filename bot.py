@@ -14,7 +14,7 @@ from config import BOT_TOKEN, REQUIRED_CHANNELS
 from database.db import init_db, get_channels
 from handlers.user import router as user_router
 from keyboards.kb import check_sub_keyboard
-from handlers.trading import router as trading_router
+from handlers.trading import router as trading_router, auto_tasks, auto_trading_loop
 from handlers.admin import router as admin_router
 from handlers.signals import router as signals_router
 from handlers.referral import router as referral_router
@@ -47,7 +47,6 @@ class SubscriptionMiddleware(BaseMiddleware):
         user_id = None
         if isinstance(event, Message):
             user_id = event.from_user.id
-            # /start va /admin komandalarini o'tkazib yuborish
             if event.text and (event.text.startswith("/start") or event.text.startswith("/admin")):
                 return await handler(event, data)
         elif isinstance(event, CallbackQuery):
@@ -58,7 +57,6 @@ class SubscriptionMiddleware(BaseMiddleware):
         if user_id is None:
             return await handler(event, data)
 
-        # Kanallar ro'yxatini olish
         channels_to_check = list(REQUIRED_CHANNELS)
         try:
             db_channels = get_channels()
@@ -70,7 +68,6 @@ class SubscriptionMiddleware(BaseMiddleware):
         if not channels_to_check:
             return await handler(event, data)
 
-        # Har bir kanalda obunani tekshirish
         for ch in channels_to_check:
             ch_id = ch["id"] if isinstance(ch, dict) else ch[1]
             try:
@@ -83,11 +80,58 @@ class SubscriptionMiddleware(BaseMiddleware):
                     elif isinstance(event, CallbackQuery):
                         await event.message.answer(text, reply_markup=kb)
                         await event.answer()
-                    return  # Handler chaqirilmaydi
+                    return
             except Exception:
                 pass
 
         return await handler(event, data)
+
+
+async def restore_active_traders(bot: Bot):
+    """Railway restart bo'lganda bot_active=1 userlarni qayta yoqish"""
+    try:
+        from database.db import get_all_active_traders
+        active_users = get_all_active_traders()
+        if not active_users:
+            logger.info("⚙️ Faol traderlar yo'q.")
+            return
+
+        logger.info(f"🔄 {len(active_users)} ta faol trader qayta tiklanmoqda...")
+        for user in active_users:
+            user_id = user["tg_id"]
+            api_key = user.get("mexc_api_key")
+            secret_key = user.get("mexc_secret_key")
+
+            if not api_key or not secret_key:
+                continue
+
+            # Default sozlamalar bilan qayta yoqish
+            trade_amount = float(user.get("trade_amount", 10))
+            min_profit = float(user.get("min_profit", 0.3))
+
+            task = asyncio.create_task(
+                auto_trading_loop(
+                    bot, user_id,
+                    api_key, secret_key,
+                    trade_amount, min_profit
+                )
+            )
+            auto_tasks[user_id] = task
+            logger.info(f"✅ User {user_id} trading loop qayta yoqildi.")
+
+            try:
+                await bot.send_message(
+                    user_id,
+                    "🔄 <b>Bot qayta ishga tushdi!</b>\n\n"
+                    f"✅ Trading avtomatik davom etmoqda\n"
+                    f"💰 Har trade: <b>{trade_amount} USDT</b>\n"
+                    f"📊 Min profit: <b>{min_profit}%</b>"
+                )
+            except Exception:
+                pass
+
+    except Exception as e:
+        logger.error(f"restore_active_traders xatosi: {e}")
 
 
 async def main():
@@ -97,15 +141,14 @@ async def main():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
-    # Majburiy obuna middleware
     dp.message.middleware(SubscriptionMiddleware())
     dp.callback_query.middleware(SubscriptionMiddleware())
 
-    dp.include_router(cancel_router)  # Eng birinchi!
+    dp.include_router(cancel_router)
     dp.include_router(admin_router)
     dp.include_router(signals_router)
     dp.include_router(arbitrage_router)
-    dp.include_router(guide_router)   # guide_copy_trading callback oldin ushlashi kerak
+    dp.include_router(guide_router)
     dp.include_router(settings_router)
     dp.include_router(mining_router)
     dp.include_router(copy_trading_router)
@@ -114,8 +157,12 @@ async def main():
     dp.include_router(history_router)
     dp.include_router(user_router)
 
-    logger.info("🤖 Ai Trading Bot ishga tushdi!")
+    logger.info("🤖 GTRobot ishga tushdi!")
+
+    # Background tasklar
     asyncio.create_task(mining_payout_loop(bot))
+    asyncio.create_task(restore_active_traders(bot))
+
     await dp.start_polling(bot, skip_updates=True)
 
 

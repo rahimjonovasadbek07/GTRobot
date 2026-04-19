@@ -11,7 +11,6 @@ def init_db():
     conn = get_conn()
     c = conn.cursor()
 
-    # Foydalanuvchilar
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             tg_id INTEGER PRIMARY KEY,
@@ -27,11 +26,22 @@ def init_db():
             referred_by INTEGER DEFAULT NULL,
             referral_bonus REAL DEFAULT 0,
             lang TEXT DEFAULT 'uz',
-            registered_at TEXT DEFAULT CURRENT_TIMESTAMP
+            registered_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            trade_amount REAL DEFAULT 10,
+            min_profit REAL DEFAULT 0.3
         )
     """)
 
-    # Tarif narxlari
+    # trade_amount va min_profit ustunlarini qo'shish (eski DB uchun)
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN trade_amount REAL DEFAULT 10")
+    except Exception:
+        pass
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN min_profit REAL DEFAULT 0.3")
+    except Exception:
+        pass
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS tariff_prices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +51,6 @@ def init_db():
         )
     """)
 
-    # To'lov rekvizitlari
     c.execute("""
         CREATE TABLE IF NOT EXISTS payment_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +63,6 @@ def init_db():
         )
     """)
 
-    # Kanallar
     c.execute("""
         CREATE TABLE IF NOT EXISTS channels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,7 +72,6 @@ def init_db():
         )
     """)
 
-    # To'lovlar
     c.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,7 +83,6 @@ def init_db():
         )
     """)
 
-    # Signallar
     c.execute("""
         CREATE TABLE IF NOT EXISTS signals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,7 +99,6 @@ def init_db():
         )
     """)
 
-    # Savdo tarixi
     c.execute("""
         CREATE TABLE IF NOT EXISTS trade_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,7 +118,6 @@ def init_db():
         )
     """)
 
-    # Mining
     c.execute("""
         CREATE TABLE IF NOT EXISTS mining_settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,15 +159,10 @@ def init_db():
         )
     """)
 
-    # Standart narxlar
     c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("daily", 5.0))
     c.execute("INSERT OR IGNORE INTO tariff_prices (tariff_type, price) VALUES (?, ?)", ("monthly", 50.0))
-
-    # Standart to'lov rekvizitlari
     c.execute("INSERT OR IGNORE INTO payment_settings (id, wallet_address, network, currency) VALUES (1, '', 'TRC20', 'USDT')")
 
-    # Standart mining sozlamalari
-    # Mining USDT da: (plan_id, name, hourly, daily_price, weekly_price, monthly_price, daily_earn, weekly_earn, monthly_earn)
     default_plans = [
         (1, "⛏️ Miner v1", 0.0005, 1.0, 6.0, 20.0, 0.012, 0.084, 0.36),
         (2, "⛏️ Miner v2", 0.002, 3.0, 18.0, 60.0, 0.048, 0.336, 1.44),
@@ -190,7 +189,8 @@ def get_user(tg_id):
     if row:
         cols = ["tg_id","username","full_name","balance","tariff","tariff_expires",
                 "mexc_api_key","mexc_secret_key","bot_active","referral_code",
-                "referred_by","referral_bonus","lang","registered_at"]
+                "referred_by","referral_bonus","lang","registered_at",
+                "trade_amount","min_profit"]
         return dict(zip(cols, row))
     return None
 
@@ -247,6 +247,43 @@ def set_bot_active(tg_id, status):
     c.execute("UPDATE users SET bot_active=? WHERE tg_id=?", (status, tg_id))
     conn.commit()
     conn.close()
+
+
+def save_trade_settings(tg_id, trade_amount, min_profit):
+    """Trading sozlamalarini saqlash"""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE users SET trade_amount=?, min_profit=? WHERE tg_id=?",
+              (trade_amount, min_profit, tg_id))
+    conn.commit()
+    conn.close()
+
+
+def get_all_active_traders():
+    """bot_active=1 va API kaliti bor barcha userlarni qaytarish"""
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        SELECT tg_id, mexc_api_key, mexc_secret_key,
+               COALESCE(trade_amount, 10) as trade_amount,
+               COALESCE(min_profit, 0.3) as min_profit
+        FROM users
+        WHERE bot_active=1
+          AND mexc_api_key IS NOT NULL
+          AND mexc_api_key != ''
+    """)
+    rows = c.fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        result.append({
+            "tg_id": r[0],
+            "mexc_api_key": r[1],
+            "mexc_secret_key": r[2],
+            "trade_amount": r[3],
+            "min_profit": r[4],
+        })
+    return result
 
 
 def get_all_users():
@@ -307,7 +344,6 @@ def get_referral_stats(tg_id):
 
 
 def has_active_tariff(tg_id):
-    """Foydalanuvchi faol tarifi bormi"""
     user = get_user(tg_id)
     if not user or not user.get("tariff") or not user.get("tariff_expires"):
         return False
@@ -623,12 +659,12 @@ def get_mining_stats(tg_id):
         return {"plan_name": row[0], "hourly_income": row[1], "started_at": row[2], "expires_at": row[3], "total_earned": row[4], "last_payout": row[5]}
     return None
 
-# Mining plan functions for backward compat
+
 def get_mining_plans():
     return get_mining_plans_db()
 
 
-# ===== SOZLAMALAR (Admin) =====
+# ===== SOZLAMALAR =====
 def get_bot_settings():
     conn = get_conn()
     c = conn.cursor()
@@ -646,7 +682,6 @@ def get_bot_settings():
     for k, v in defaults.items():
         c.execute("INSERT OR IGNORE INTO bot_settings (key, value) VALUES (?, ?)", (k, v))
     conn.commit()
-
     c.execute("SELECT key, value FROM bot_settings")
     rows = c.fetchall()
     conn.close()
