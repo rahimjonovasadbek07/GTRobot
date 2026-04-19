@@ -105,7 +105,7 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(signals_router)
     dp.include_router(arbitrage_router)
-    dp.include_router(guide_router)
+    dp.include_router(guide_router)   # guide_copy_trading callback oldin ushlashi kerak
     dp.include_router(settings_router)
     dp.include_router(mining_router)
     dp.include_router(copy_trading_router)
@@ -114,7 +114,7 @@ async def main():
     dp.include_router(history_router)
     dp.include_router(user_router)
 
-    logger.info("🤖 Ai Trading Bot V3 ishga tushdi!")
+    logger.info("🤖 GTRobot V3 ishga tushdi!")
     asyncio.create_task(mining_payout_loop(bot))
     await dp.start_polling(bot, skip_updates=True)
 

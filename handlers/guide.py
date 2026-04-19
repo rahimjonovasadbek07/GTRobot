@@ -11,7 +11,7 @@ router = Router()
 
 GUIDE_TX = {
     "uz": {
-        "title": "📖 <b>GTRobot Qo'llanma</b>",
+        "title": "📖 <b>Ai Trading Bot Qo'llanma</b>",
         "select": "Quyidagi bo'limlardan birini tanlang:",
         "back_btn": "🔙 Qo'llanmaga qaytish",
         "btn_api": "🔑 MEXC API olish",
@@ -24,7 +24,7 @@ GUIDE_TX = {
         "btn_faq": "❓ FAQ",
     },
     "ru": {
-        "title": "📖 <b>Руководство GTRobot</b>",
+        "title": "📖 <b>Руководство Ai Trading Bot</b>",
         "select": "Выберите раздел:",
         "back_btn": "🔙 Назад к руководству",
         "btn_api": "🔑 Получить MEXC API",
@@ -37,7 +37,7 @@ GUIDE_TX = {
         "btn_faq": "❓ FAQ",
     },
     "en": {
-        "title": "📖 <b>GTRobot Guide</b>",
+        "title": "📖 <b>Ai Trading Bot Guide</b>",
         "select": "Choose a section:",
         "back_btn": "🔙 Back to guide",
         "btn_api": "🔑 Get MEXC API",

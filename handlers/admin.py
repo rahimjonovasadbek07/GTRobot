@@ -214,7 +214,7 @@ async def mining_settings(message: Message):
     for p in plans:
         text += (
             f"<b>{p['name']}</b>\n"
-            f"  Soatlik: {p['hourly_usdt']} USDT\n"
+            f"  Soatlik: {p['hourly_uzs']} USDT\n"
             f"  Kunlik: {p['daily_price']} → {p['daily_earn']} USDT\n"
             f"  Oylik: {p['monthly_price']} → {p['monthly_earn']} USDT\n\n"
         )
@@ -272,7 +272,7 @@ async def proc_mining_value(message: Message, state: FSMContext):
         value = float(message.text.replace(" ", "").replace(",", ""))
         data = await state.get_data()
         field_map = {
-            "hourly": "hourly_USDT", "dprice": "daily_price",
+            "hourly": "hourly_uzs", "dprice": "daily_price",
             "dearn": "daily_earn", "mprice": "monthly_price", "mearn": "monthly_earn",
         }
         update_mining_plan(data["mining_plan_id"], **{field_map[data["mining_field"]]: value})

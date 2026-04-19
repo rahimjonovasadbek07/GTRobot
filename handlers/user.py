@@ -234,17 +234,45 @@ async def show_balance(message: Message):
         except Exception:
             pass
 
-    bot_status = "✅ Faol" if user["bot_active"] else "⏹ Off"
+    if lang == "ru":
+        bal_label = "Баланс"
+        ref_label = "Реферал"
+        tar_label = "Тариф"
+        api_label = "API"
+        bot_label = "Бот"
+        bot_on = "✅ Активен"
+        bot_off = "⏹ Выкл"
+        title = "💰 <b>Счёт</b>"
+    elif lang == "en":
+        bal_label = "Balance"
+        ref_label = "Referral"
+        tar_label = "Tariff"
+        api_label = "API"
+        bot_label = "Bot"
+        bot_on = "✅ Active"
+        bot_off = "⏹ Off"
+        title = "💰 <b>Account</b>"
+    else:
+        bal_label = "Balans"
+        ref_label = "Referral"
+        tar_label = "Tarif"
+        api_label = "API"
+        bot_label = "Bot"
+        bot_on = "✅ Faol"
+        bot_off = "⏹ Off"
+        title = "💰 <b>Hisob</b>"
+
+    bot_status = bot_on if user["bot_active"] else bot_off
     api_status = "✅" if user.get("mexc_api_key") else "❌"
 
     await message.answer(
-        f"💰 <b>Hisob</b>\n\n"
+        f"{title}\n\n"
         f"👤 {message.from_user.full_name}\n"
-        f"💵 Balans: <b>{user['balance']:.4f} USDT</b>\n"
-        f"🎁 Referral: <b>{user.get('referral_bonus', 0):.4f} USDT</b>\n\n"
-        f"📋 Tarif: {tariff_info}\n"
-        f"🔑 API: {api_status}\n"
-        f"🤖 Bot: {bot_status}",
+        f"💵 {bal_label}: <b>{user['balance']:.4f} USDT</b>\n"
+        f"🎁 {ref_label}: <b>{user.get('referral_bonus', 0):.4f} USDT</b>\n\n"
+        f"📋 {tar_label}: {tariff_info}\n"
+        f"🔑 {api_label}: {api_status}\n"
+        f"🤖 {bot_label}: {bot_status}",
         reply_markup=balance_keyboard()
     )
 
@@ -416,6 +444,13 @@ async def cb_buy_tariff(call: CallbackQuery):
 @router.message(F.text.in_(["🆘 Qo'llab-quvvatlash", "🆘 Поддержка", "🆘 Support"]))
 async def show_support(message: Message):
     from database.db import get_bot_settings
+    lang = get_user_lang(message.from_user.id)
     s = get_bot_settings()
     support_text = s.get("support_text", "📱 Admin: @grandtrade_admin\n⏰ 9:00 — 22:00")
-    await message.answer(f"🆘 <b>Qo'llab-quvvatlash</b>\n\n{support_text}")
+    if lang == "ru":
+        title = "🆘 <b>Поддержка</b>"
+    elif lang == "en":
+        title = "🆘 <b>Support</b>"
+    else:
+        title = "🆘 <b>Qo'llab-quvvatlash</b>"
+    await message.answer(f"{title}\n\n{support_text}")
