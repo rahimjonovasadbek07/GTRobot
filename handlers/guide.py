@@ -63,9 +63,9 @@ GUIDE_CONTENT = {
         "en": "🤖 <b>Auto Trading — Guide</b>\n\nWhen admin sends a signal, bot automatically opens an order.\n\n<b>Step 1:</b> Connect MEXC API\n<b>Step 2:</b> Buy a tariff\n<b>Step 3:</b> Activate the bot\n\nSignal arrives — bot works automatically! ✅\n\n⚠️ You need enough USDT on MEXC.",
     },
     "copy_trading": {
-        "uz": "📊 <b>Copy Trading — Qo'llanma</b>\n\nMEXC birjasidagi real vaqt ma'lumotlarini ko'rish va tahlil qilish.\n\n🔥 <b>Top 20 Volume</b> — eng aktiv juftliklar\n📈 <b>Top Gainers</b> — eng ko'p o'sganlar\n📉 <b>Top Losers</b> — eng ko'p tushganlar\n🔍 <b>Juftlik tahlili</b> — RSI va trend\n\n<b>RSI:</b>\n• RSI < 30 → Sotib olish vaqti 🟢\n• RSI > 70 → Sotish vaqti 🔴",
-        "ru": "📊 <b>Copy Trading — Руководство</b>\n\nПросмотр и анализ данных биржи MEXC в реальном времени.\n\n🔥 <b>Top 20 Volume</b> — самые активные пары\n📈 <b>Top Gainers</b> — наибольший рост\n📉 <b>Top Losers</b> — наибольшее падение\n🔍 <b>Анализ пары</b> — RSI и тренд\n\n<b>RSI:</b>\n• RSI < 30 → Время покупать 🟢\n• RSI > 70 → Время продавать 🔴",
-        "en": "📊 <b>Copy Trading — Guide</b>\n\nView and analyze MEXC exchange data in real time.\n\n🔥 <b>Top 20 Volume</b> — most active pairs\n📈 <b>Top Gainers</b> — biggest gainers\n📉 <b>Top Losers</b> — biggest losers\n🔍 <b>Pair analysis</b> — RSI and trend\n\n<b>RSI:</b>\n• RSI < 30 → Time to buy 🟢\n• RSI > 70 → Time to sell 🔴",
+        "uz": "📊 <b>Copy Trading — Qo'llanma</b>\n\nMEXC birjasidagi real vaqt ma'lumotlarini ko'rish va tahlil qilish.\n\n🔥 <b>Top 20 Volume</b> — eng aktiv juftliklar\n📈 <b>Top Gainers</b> — eng ko'p o'sganlar\n📉 <b>Top Losers</b> — eng ko'p tushganlar\n🔍 <b>Juftlik tahlili</b> — RSI va trend\n\n<b>RSI:</b>\n• RSI &lt; 30 → Sotib olish vaqti 🟢\n• RSI &gt; 70 → Sotish vaqti 🔴",
+        "ru": "📊 <b>Copy Trading — Руководство</b>\n\nПросмотр и анализ данных биржи MEXC в реальном времени.\n\n🔥 <b>Top 20 Volume</b> — самые активные пары\n📈 <b>Top Gainers</b> — наибольший рост\n📉 <b>Top Losers</b> — наибольшее падение\n🔍 <b>Анализ пары</b> — RSI и тренд\n\n<b>RSI:</b>\n• RSI &lt; 30 → Время покупать 🟢\n• RSI &gt; 70 → Время продавать 🔴",
+        "en": "📊 <b>Copy Trading — Guide</b>\n\nView and analyze MEXC exchange data in real time.\n\n🔥 <b>Top 20 Volume</b> — most active pairs\n📈 <b>Top Gainers</b> — biggest gainers\n📉 <b>Top Losers</b> — biggest losers\n🔍 <b>Pair analysis</b> — RSI and trend\n\n<b>RSI:</b>\n• RSI &lt; 30 → Time to buy 🟢\n• RSI &gt; 70 → Time to sell 🔴",
     },
     "arbitrage": {
         "uz": "🔺 <b>Uchburchak Arbitraj — Qo'llanma</b>\n\nBir birja ichida 3 ta juftlik orqali narx farqidan foyda qilish.\n\n<b>Misol:</b>\n1️⃣ 100 USDT → BTC\n2️⃣ BTC → ETH\n3️⃣ ETH → USDT = 100.5 USDT (+0.5%)\n\n• Minimal 10 USDT kerak\n• 0.3% minimal foyda tavsiya etiladi\n• Komissiya: 0.1% × 3 = 0.3%",
@@ -132,11 +132,7 @@ async def show_guide(message: Message):
 async def _send_guide_section(call: CallbackQuery, section: str):
     lang = get_user_lang(call.from_user.id)
     content = GUIDE_CONTENT.get(section, {}).get(lang) or GUIDE_CONTENT.get(section, {}).get("uz", "—")
-    await call.answer()
-    try:
-        await call.message.edit_text(content, reply_markup=back_kb(lang), parse_mode="HTML")
-    except Exception:
-        await call.message.answer(content, reply_markup=back_kb(lang), parse_mode="HTML")
+    await call.message.edit_text(content, reply_markup=back_kb(lang))
 
 
 @router.callback_query(F.data == "guide_mexc_api")
