@@ -166,7 +166,7 @@ async def cb_mining_plans(call: CallbackQuery):
         profit_d = round(p["daily_earn"] - p["daily_price"], 4)
         text += (
             f"<b>{p['name']}</b>\n"
-            f"💰 Soatlik: <b>{p['hourly_uzs']} USDT</b>\n"
+            f"💰 Soatlik: <b>{p['hourly_usdt']} USDT</b>\n"
             f"📈 Kunlik daromad: <b>{p['daily_earn']} USDT</b>\n"
             f"💳 Kunlik narx: {p['daily_price']} USDT\n"
             f"📊 Sof foyda/kun: +{profit_d} USDT\n\n"
