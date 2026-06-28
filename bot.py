@@ -10,7 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from typing import Callable, Dict, Any, Awaitable
 
-from config import BOT_TOKEN, REQUIRED_CHANNELS
+from config import BOT_TOKEN, REQUIRED_CHANNELS, BACKUP_CHANNEL_ID, DB_PATH
 from database.db import init_db, get_channels
 from handlers.user import router as user_router
 from keyboards.kb import check_sub_keyboard
@@ -25,6 +25,8 @@ from handlers.guide import router as guide_router
 from handlers.mining import router as mining_router, mining_payout_loop
 from handlers.cancel_handler import router as cancel_router
 from handlers.settings import router as settings_router
+from handlers.data_export import router as export_router
+from utils.backup import backup_to_channel, restore_from_channel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", stream=sys.stdout)
 logger = logging.getLogger(__name__)
@@ -121,6 +123,21 @@ async def restore_active_traders(bot: Bot):
         logger.error(f"restore_active_traders xatosi: {e}")
 
 
+async def auto_backup_loop(bot: Bot):
+    """Har 30 daqiqada ma'lumotlarni backup kanaliga yuborish"""
+    while True:
+        await asyncio.sleep(1800)  # 30 daqiqa
+        if BACKUP_CHANNEL_ID:
+            try:
+                success = await backup_to_channel(bot, BACKUP_CHANNEL_ID, DB_PATH)
+                if success:
+                    logger.info("✅ Avtomatik backup yuborildi")
+                else:
+                    logger.warning("⚠️ Backup yuborilmadi")
+            except Exception as e:
+                logger.error(f"Backup xatosi: {e}")
+
+
 async def main():
     init_db()
     logger.info("✅ Ma'lumotlar bazasi tayyor.")
@@ -128,12 +145,25 @@ async def main():
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
 
+    # Bot ishga tushganda eski ma'lumotlarni kanaldan qaytarish
+    if BACKUP_CHANNEL_ID:
+        try:
+            logger.info("📥 Backup dan ma'lumotlar qaytarilmoqda...")
+            restored = await restore_from_channel(bot, BACKUP_CHANNEL_ID, DB_PATH)
+            if restored:
+                logger.info("✅ Ma'lumotlar muvaffaqiyatli qaytarildi!")
+            else:
+                logger.info("ℹ️ Backup topilmadi, yangi DB bilan davom etiladi.")
+        except Exception as e:
+            logger.error(f"Restore xatosi: {e}")
+
     dp.message.middleware(SubscriptionMiddleware())
     dp.callback_query.middleware(SubscriptionMiddleware())
 
     # MUHIM: guide_router COPY TRADING DAN OLDIN bo'lishi kerak!
     dp.include_router(cancel_router)
     dp.include_router(admin_router)
+    dp.include_router(export_router)
     dp.include_router(signals_router)
     dp.include_router(arbitrage_router)
     dp.include_router(guide_router)      # ← guide avval
@@ -148,6 +178,8 @@ async def main():
     logger.info("🤖 GTRobot ishga tushdi!")
     asyncio.create_task(mining_payout_loop(bot))
     asyncio.create_task(restore_active_traders(bot))
+    if BACKUP_CHANNEL_ID:
+        asyncio.create_task(auto_backup_loop(bot))
 
     await dp.start_polling(bot, skip_updates=True)
 

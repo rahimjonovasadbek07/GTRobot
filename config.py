@@ -17,3 +17,5 @@ TARIFF_PRICES = {
 }
 
 DB_PATH = "ai_trading_bot.db"
+
+BACKUP_CHANNEL_ID = os.getenv("BACKUP_CHANNEL_ID", "")
